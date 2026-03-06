@@ -1,0 +1,716 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum PrimaryRole {
+  MEMBER
+  PLAYER
+  ADMIN
+  MANAGER
+}
+
+enum SubRole {
+  AGENT
+  PHYSIO
+  COACH
+  NUTRITIONIST
+  PITCH_MANAGER
+}
+
+enum ScopeType {
+  CLUB
+  SQUAD
+  PLAYER
+}
+
+enum SubscriptionStatus {
+  TRIAL
+  ACTIVE
+  PAST_DUE
+  CANCELED
+}
+
+enum MarketplaceListingStatus {
+  ACTIVE
+  HIRED
+  CLOSED
+}
+
+enum MarketplaceOfferStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  WITHDRAWN
+}
+
+enum SocialVisibility {
+  PUBLIC
+}
+
+enum SocialMediaType {
+  IMAGE
+  VIDEO
+}
+
+enum SocialReactionType {
+  LIKE
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  fullName     String?
+  isPlatformAdmin Boolean @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  memberships  Membership[]
+  invitations  Invitation[]
+  squadMembers SquadMember[]
+
+  playerProfile PlayerProfile?
+
+  matchLineupPlayers MatchLineupPlayer[]
+  playerMatchStats   PlayerMatchStat[]
+  playerInjuries     PlayerInjury[]
+  createdTasks       ClubTask[]         @relation("TaskCreatedBy")
+  assignedTasks      ClubTask[]         @relation("TaskAssignedTo")
+  createdMessages    ClubMessage[]      @relation("MessageCreatedBy")
+  marketplaceListing MarketplaceListing?
+  sentMarketplaceOffers MarketplaceOffer[] @relation("MarketplaceOfferSender")
+  socialPosts        SocialPost[]       @relation("SocialPostAuthor")
+  socialComments     SocialComment[]    @relation("SocialCommentAuthor")
+  socialReactions    SocialReaction[]   @relation("SocialReactionUser")
+}
+
+model Club {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  themePrimary String @default("#FFC840")
+  themeDeep String @default("#141820")
+  isActive  Boolean  @default(true)
+  aiEnabled Boolean  @default(true)
+  marketplaceEnabled Boolean @default(true)
+  socialEnabled Boolean @default(true)
+  billingPlan String @default("FREE")
+  subscriptionStatus SubscriptionStatus @default(TRIAL)
+  subscriptionMonthlyPrice Int @default(0)
+  subscriptionStartAt DateTime?
+  subscriptionNextBillingAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  memberships Membership[]
+  invitations Invitation[]
+  squads      Squad[]
+  matches     Match[]
+
+  matchLineups     MatchLineup[]
+  playerMatchStats PlayerMatchStat[]
+
+  seasons        Season[]
+  opponents      Opponent[]
+  seasonGames    SeasonGame[]
+  playerInjuries PlayerInjury[]
+  tasks          ClubTask[]
+  messages       ClubMessage[]
+  roleSettings   ClubRoleSetting[]
+  marketplaceOffers MarketplaceOffer[]
+  hiredMarketplaceListings MarketplaceListing[] @relation("MarketplaceListingHiredClub")
+  socialPosts    SocialPost[]
+}
+
+model ClubRoleSetting {
+  id        String   @id @default(cuid())
+  clubId    String
+  roleKey   String
+  isEnabled Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  club Club @relation(fields: [clubId], references: [id], onDelete: Cascade)
+
+  @@unique([clubId, roleKey])
+  @@index([clubId])
+}
+
+enum ClubTaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum ClubTaskStatus {
+  OPEN
+  PENDING
+  DONE
+}
+
+model ClubTask {
+  id              String           @id @default(cuid())
+  clubId          String
+  createdByUserId String
+  assignedToUserId String?
+  title           String
+  description     String?
+  priority        ClubTaskPriority @default(MEDIUM)
+  status          ClubTaskStatus   @default(OPEN)
+  dueAt           DateTime?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  club      Club  @relation(fields: [clubId], references: [id])
+  createdBy User  @relation("TaskCreatedBy", fields: [createdByUserId], references: [id])
+  assignedTo User? @relation("TaskAssignedTo", fields: [assignedToUserId], references: [id])
+
+  @@index([clubId])
+  @@index([assignedToUserId])
+  @@index([status])
+}
+
+model ClubMessage {
+  id              String   @id @default(cuid())
+  clubId          String
+  createdByUserId String
+  title           String
+  body            String
+  tone            String   @default("default")
+  audience        String   @default("ALL")
+  isPinned        Boolean  @default(false)
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  club      Club @relation(fields: [clubId], references: [id])
+  createdBy User @relation("MessageCreatedBy", fields: [createdByUserId], references: [id])
+
+  @@index([clubId])
+  @@index([isActive])
+  @@index([createdAt])
+}
+
+model Membership {
+  id        String      @id @default(cuid())
+  userId    String
+  clubId    String
+  primary   PrimaryRole
+  subRoles  SubRole[]
+  createdAt DateTime    @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+  club Club @relation(fields: [clubId], references: [id])
+
+  scopes ScopeGrant[]
+
+  @@unique([userId, clubId])
+  @@index([clubId])
+}
+
+model ScopeGrant {
+  id           String    @id @default(cuid())
+  membershipId String
+  scopeType    ScopeType
+  scopeRefId   String?
+  createdAt    DateTime  @default(now())
+
+  membership Membership @relation(fields: [membershipId], references: [id])
+
+  @@index([membershipId])
+}
+
+model Invitation {
+  id        String    @id @default(cuid())
+  clubId    String
+  userId    String?
+  email     String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  primary  PrimaryRole
+  subRoles SubRole[]
+
+  club Club @relation(fields: [clubId], references: [id])
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([clubId])
+  @@index([userId])
+  @@index([email])
+}
+
+model Squad {
+  id        String   @id @default(cuid())
+  clubId    String
+  name      String
+  code      String? // optional: "FT", "U18", etc.
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  club    Club          @relation(fields: [clubId], references: [id])
+  members SquadMember[]
+  matches Match[]
+
+  @@unique([clubId, name])
+  @@index([clubId])
+}
+
+model SquadMember {
+  id      String @id @default(cuid())
+  squadId String
+  userId  String
+
+  // optional player-specific fields
+  jerseyNo Int?
+  position String? // "ST", "CM", "CB" etc.
+
+  createdAt DateTime @default(now())
+
+  squad Squad @relation(fields: [squadId], references: [id])
+  user  User  @relation(fields: [userId], references: [id])
+
+  @@unique([squadId, userId])
+  @@index([squadId])
+  @@index([userId])
+}
+
+model PlayerProfile {
+  id     String @id @default(cuid())
+  userId String @unique
+
+  dob          DateTime?
+  nationality  String?
+  heightCm     Int?
+  weightKg     Int?
+  dominantFoot String? // "RIGHT" | "LEFT" | "BOTH"
+  positions    String[] // ["ST","LW","CAM"] etc (simple, flexible)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model MarketplaceListing {
+  id                 String                  @id @default(cuid())
+  userId             String                  @unique
+  headline           String
+  bio                String?
+  positions          String[]
+  nationality        String?
+  expectedSalary     Int?
+  openToOffers       Boolean                 @default(true)
+  status             MarketplaceListingStatus @default(ACTIVE)
+  hiredClubId        String?
+  hiredAt            DateTime?
+  createdAt          DateTime                @default(now())
+  updatedAt          DateTime                @updatedAt
+
+  user      User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  hiredClub Club? @relation("MarketplaceListingHiredClub", fields: [hiredClubId], references: [id])
+  offers    MarketplaceOffer[]
+
+  @@index([status])
+  @@index([openToOffers])
+  @@index([hiredClubId])
+}
+
+model MarketplaceOffer {
+  id              String               @id @default(cuid())
+  listingId       String
+  recruiterUserId String
+  recruiterClubId String
+  message         String
+  offeredSalary   Int?
+  status          MarketplaceOfferStatus @default(PENDING)
+  respondedAt     DateTime?
+  acceptedAt      DateTime?
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+
+  listing       MarketplaceListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  recruiter     User              @relation("MarketplaceOfferSender", fields: [recruiterUserId], references: [id], onDelete: Cascade)
+  recruiterClub Club              @relation(fields: [recruiterClubId], references: [id], onDelete: Cascade)
+
+  @@index([listingId])
+  @@index([recruiterClubId])
+  @@index([recruiterUserId])
+  @@index([status])
+}
+
+model SocialPost {
+  id           String           @id @default(cuid())
+  authorUserId String
+  authorClubId String?
+  skill        String
+  caption      String
+  tags         String[]
+  visibility   SocialVisibility @default(PUBLIC)
+  isArchived   Boolean          @default(false)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  author    User           @relation("SocialPostAuthor", fields: [authorUserId], references: [id], onDelete: Cascade)
+  authorClub Club?         @relation(fields: [authorClubId], references: [id], onDelete: SetNull)
+  media     SocialMedia?
+  comments  SocialComment[]
+  reactions SocialReaction[]
+
+  @@index([authorUserId])
+  @@index([authorClubId])
+  @@index([createdAt])
+  @@index([visibility, isArchived])
+}
+
+model SocialMedia {
+  id          String          @id @default(cuid())
+  postId      String          @unique
+  type        SocialMediaType
+  url         String
+  publicId    String
+  format      String?
+  width       Int?
+  height      Int?
+  durationSec Float?
+  bytes       Int?
+  createdAt   DateTime        @default(now())
+
+  post SocialPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([type])
+  @@index([createdAt])
+}
+
+model SocialComment {
+  id         String   @id @default(cuid())
+  postId     String
+  userId     String
+  text       String
+  isDeleted  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  post SocialPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User       @relation("SocialCommentAuthor", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([postId, createdAt])
+  @@index([userId, createdAt])
+  @@index([isDeleted])
+}
+
+model SocialReaction {
+  id        String             @id @default(cuid())
+  postId    String
+  userId    String
+  type      SocialReactionType @default(LIKE)
+  createdAt DateTime           @default(now())
+
+  post SocialPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User       @relation("SocialReactionUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId, type])
+  @@index([postId, type])
+  @@index([userId, type])
+}
+
+enum MatchStatus {
+  SCHEDULED
+  LIVE
+  FINISHED
+  CANCELLED
+}
+
+enum MatchEventType {
+  GOAL
+  ASSIST
+  YELLOW
+  RED
+  SUB_ON
+  SUB_OFF
+  INJURY
+  NOTE
+}
+
+model Match {
+  id        String      @id @default(cuid())
+  clubId    String
+  squadId   String?
+  title     String
+  opponent  String
+  venue     String?
+  kickoffAt DateTime
+  status    MatchStatus @default(SCHEDULED)
+
+  homeScore Int @default(0)
+  awayScore Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  club  Club   @relation(fields: [clubId], references: [id])
+  squad Squad? @relation(fields: [squadId], references: [id])
+
+  events           MatchEvent[]
+  lineups          MatchLineup[]
+  playerMatchStats PlayerMatchStat[]
+
+  seasonGame  SeasonGame?
+  seasonMatch SeasonMatch?
+
+  @@index([clubId])
+  @@index([squadId])
+}
+
+model MatchEvent {
+  id      String         @id @default(cuid())
+  matchId String
+  clubId  String
+  type    MatchEventType
+  minute  Int?
+  team    String?
+
+  notes String?
+
+  // optional refs
+  playerId String?
+  assistId String?
+
+  createdAt DateTime @default(now())
+
+  match Match @relation(fields: [matchId], references: [id])
+
+  @@index([matchId])
+}
+
+enum LineupSide {
+  HOME
+  AWAY
+}
+
+enum LineupSlot {
+  STARTING
+  BENCH
+}
+
+model MatchLineup {
+  id            String     @id @default(cuid())
+  matchId       String
+  clubId        String
+  side          LineupSide
+  formation     String?
+  captainUserId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  match Match @relation(fields: [matchId], references: [id])
+  club  Club  @relation(fields: [clubId], references: [id])
+
+  players MatchLineupPlayer[]
+
+  @@unique([matchId, side])
+  @@index([clubId])
+  @@index([matchId])
+}
+
+model MatchLineupPlayer {
+  id       String @id @default(cuid())
+  lineupId String
+  userId   String
+
+  slot     LineupSlot
+  jerseyNo Int?
+  position String? // "ST", "CM", "CB", etc.
+  order    Int        @default(0) // for sorting
+
+  createdAt DateTime @default(now())
+
+  lineup MatchLineup @relation(fields: [lineupId], references: [id])
+  user   User        @relation(fields: [userId], references: [id])
+
+  @@unique([lineupId, userId])
+  @@index([lineupId])
+  @@index([userId])
+}
+
+model PlayerMatchStat {
+  id      String @id @default(cuid())
+  clubId  String
+  matchId String
+  userId  String
+
+  // lineup context
+  side    String? // "HOME" | "AWAY" (optional)
+  started Boolean @default(false)
+  minutes Int     @default(0)
+
+  // stats
+  goals   Int @default(0)
+  assists Int @default(0)
+  yellow  Int @default(0)
+  red     Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  club  Club  @relation(fields: [clubId], references: [id])
+  match Match @relation(fields: [matchId], references: [id])
+  user  User  @relation(fields: [userId], references: [id])
+
+  @@unique([matchId, userId])
+  @@index([clubId])
+  @@index([userId])
+  @@index([matchId])
+}
+
+model Opponent {
+  id        String   @id @default(cuid())
+  clubId    String
+  name      String // e.g. "Mohun Bagan"
+  shortName String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  club  Club         @relation(fields: [clubId], references: [id])
+  games SeasonGame[]
+
+  @@unique([clubId, name])
+  @@index([clubId])
+}
+
+model SeasonGame {
+  id       String @id @default(cuid())
+  clubId   String
+  seasonId String
+  matchId  String @unique
+
+  opponentId String
+  venueType  String // "HOME" | "AWAY"  (club perspective)
+  gf         Int
+  ga         Int
+  result     String // "W" | "D" | "L"
+  points     Int
+
+  playedAt DateTime
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  club     Club     @relation(fields: [clubId], references: [id])
+  season   Season   @relation(fields: [seasonId], references: [id])
+  opponent Opponent @relation(fields: [opponentId], references: [id])
+  match    Match    @relation(fields: [matchId], references: [id])
+
+  @@index([clubId])
+  @@index([seasonId])
+  @@index([opponentId])
+}
+
+model Season {
+  id       String    @id @default(cuid())
+  clubId   String
+  name     String
+  startAt  DateTime
+  endAt    DateTime?
+  isActive Boolean   @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  club  Club         @relation(fields: [clubId], references: [id])
+  games SeasonGame[]
+
+  teams     SeasonTeam[]
+  matches   SeasonMatch[]
+  standings SeasonStanding[]
+
+  @@unique([clubId, name])
+  @@index([clubId])
+}
+
+model SeasonTeam {
+  id       String @id @default(cuid())
+  seasonId String
+  name     String
+
+  season Season @relation(fields: [seasonId], references: [id])
+
+  standings   SeasonStanding[]
+  homeMatches SeasonMatch[]    @relation("HomeTeam")
+  awayMatches SeasonMatch[]    @relation("AwayTeam")
+
+  @@unique([seasonId, name])
+  @@index([seasonId])
+}
+
+model SeasonMatch {
+  id       String @id @default(cuid())
+  seasonId String
+  matchId  String @unique
+
+  homeTeamId String
+  awayTeamId String
+
+  season Season @relation(fields: [seasonId], references: [id])
+  match  Match  @relation(fields: [matchId], references: [id])
+
+  homeTeam SeasonTeam @relation("HomeTeam", fields: [homeTeamId], references: [id])
+  awayTeam SeasonTeam @relation("AwayTeam", fields: [awayTeamId], references: [id])
+
+  @@index([seasonId])
+}
+
+model SeasonStanding {
+  id       String @id @default(cuid())
+  seasonId String
+  teamId   String
+
+  played Int @default(0)
+  won    Int @default(0)
+  draw   Int @default(0)
+  lost   Int @default(0)
+
+  goalsFor     Int @default(0)
+  goalsAgainst Int @default(0)
+  goalDiff     Int @default(0)
+  points       Int @default(0)
+
+  updatedAt DateTime @updatedAt
+
+  season Season     @relation(fields: [seasonId], references: [id])
+  team   SeasonTeam @relation(fields: [teamId], references: [id])
+
+  @@unique([seasonId, teamId])
+  @@index([seasonId])
+}
+
+model PlayerInjury {
+  id     String @id @default(cuid())
+  clubId String
+  userId String
+
+  type        String // "Hamstring", "ACL", etc
+  severity    String // "LOW" | "MEDIUM" | "HIGH"
+  description String?
+
+  startDate DateTime
+  endDate   DateTime?
+
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  club Club @relation(fields: [clubId], references: [id])
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([clubId])
+  @@index([userId])
+}

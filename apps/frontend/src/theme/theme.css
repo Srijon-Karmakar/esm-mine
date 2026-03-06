@@ -1,0 +1,44 @@
+:root {
+  --bg: 246 247 252;
+  --surface: 255 255 255;
+  --surface-2: 250 250 252;
+
+  --text: 12 16 24;
+  --muted: 100 110 130;
+
+  /* Club colors (customizable) */
+  --primary: 255 200 64; /* default amber */
+  --primary-2: 20 24 32; /* deep */
+  --ring: 255 200 64;
+
+  --border: 232 235 242;
+  --shadow: 12 16 24;
+
+  --radius: 18px;
+}
+
+[data-theme="dark"] {
+  --bg: 14 16 20;
+  --surface: 20 22 28;
+  --surface-2: 18 20 26;
+
+  --text: 240 244 255;
+  --muted: 160 170 190;
+
+  --border: 40 44 56;
+  --shadow: 0 0 0;
+}
+
+:root {
+  --bg: 245 246 250;           /* soft grey like reference */
+  --surface: 252 252 252;      /* canvas */
+  --text: 16 20 28;
+  --muted: 105 112 126;
+
+  /* club colors */
+  --primary: 255 205 95;       /* warm amber */
+  --primary-2: 20 24 32;       /* deep charcoal */
+
+  --border: 231 234 242;
+  --radius: 18px;
+}

@@ -1,0 +1,43 @@
+@import "./theme/theme.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body, #root { height: 100%; }
+body {
+  background: rgb(var(--bg));
+  color: rgb(var(--text));
+}
+
+/* Keep scroll behavior but hide the visual scrollbar when needed. */
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+/* Dashboard/admin readability pass for white-on-light text combinations. */
+.dashboard-readable :where([class~="text-white"]) {
+  color: rgb(var(--text)) !important;
+}
+
+.dashboard-readable :where([class*="text-white/"]) {
+  color: rgba(var(--text), 0.78) !important;
+}
+
+.dashboard-readable :where([class*="placeholder:text-white"])::placeholder {
+  color: rgba(var(--muted), 0.74) !important;
+}
+
+.dashboard-readable :where([class*="bg-white/10"]) {
+  background: rgba(255, 255, 255, 0.62) !important;
+}
+
+.dashboard-readable :where([class*="border-white/20"]) {
+  border-color: rgba(var(--primary-2), 0.16) !important;
+}

@@ -1,0 +1,1 @@
+export type UserRole = "SUPERADMIN" | "ADMIN" | "PLAYER";

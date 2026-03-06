@@ -1,0 +1,12 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root{
+  --app-bg: #e7e9ff;
+  --neu-surface: #eef0ff;
+}
+
+body{
+  background: var(--app-bg);
+}
