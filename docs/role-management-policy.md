@@ -76,7 +76,7 @@ Implemented:
   - `matches` -> `matches.read`
   - `stats` -> `stats.read`
   - `medical` -> `injuries.read`
-  - `messages` -> `operations.read`
+  - `messages` -> `membership.self.read`
   - `settings` -> `membership.self.read`
   - `onboarding` -> `membership.accept.assignment`
 - `AdminRoute` now checks policy permission (`clubs.read`) instead of hardcoded role string checks.

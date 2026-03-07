@@ -468,6 +468,59 @@ export class OperationsService {
     return { task: updated };
   }
 
+  async messages(
+    userId: string,
+    clubId: string,
+    limit: number,
+    includeArchived = false,
+  ) {
+    const membership = await this.getMembership(userId, clubId);
+    const safeLimit = Math.min(Math.max(limit || 30, 1), 120);
+    const canManage = this.isAdminOrManager(membership.primary);
+
+    const messages = await this.prisma.clubMessage.findMany({
+      where: {
+        clubId,
+        ...(canManage
+          ? includeArchived
+            ? {}
+            : { isActive: true }
+          : {
+              isActive: true,
+              audience: {
+                in:
+                  membership.primary === PrimaryRole.PLAYER
+                    ? ['ALL', 'PLAYERS']
+                    : ['ALL', 'STAFF'],
+              },
+            }),
+      },
+      orderBy: [{ isPinned: 'desc' }, { createdAt: 'desc' }],
+      take: safeLimit,
+      include: {
+        createdBy: { select: { id: true, email: true, fullName: true } },
+      },
+    });
+
+    return {
+      clubId,
+      role: membership.primary,
+      messages: messages.map((row) => ({
+        id: row.id,
+        title: row.title,
+        body: row.body,
+        tone: normalizeTone(row.tone),
+        audience: row.audience,
+        isPinned: row.isPinned,
+        isActive: row.isActive,
+        mutable: canManage,
+        createdAt: row.createdAt.toISOString(),
+        updatedAt: row.updatedAt.toISOString(),
+        createdByName: row.createdBy.fullName || row.createdBy.email || row.createdBy.id,
+      })),
+    };
+  }
+
   async feed(userId: string, clubId: string, limit: number) {
     const membership = await this.getMembership(userId, clubId);
     const safeLimit = Math.min(Math.max(limit || 30, 1), 120);

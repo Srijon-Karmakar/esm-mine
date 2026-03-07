@@ -336,7 +336,7 @@ export default function App() {
           <Route
             path="messages"
             element={
-              <DashboardPermissionRoute permission="operations.read">
+              <DashboardPermissionRoute permission="membership.self.read">
                 <MessagesPage />
               </DashboardPermissionRoute>
             }

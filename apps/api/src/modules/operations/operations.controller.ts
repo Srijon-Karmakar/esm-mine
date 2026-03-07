@@ -71,6 +71,23 @@ export class OperationsController {
     return this.operations.feed(req.user.sub, clubId, Number(limit));
   }
 
+  @Get('messages')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @Permissions('membership.self.read')
+  messages(
+    @Req() req: any,
+    @Param('clubId') clubId: string,
+    @Query('limit') limit: string = '30',
+    @Query('includeArchived') includeArchived: string = 'false',
+  ) {
+    return this.operations.messages(
+      req.user.sub,
+      clubId,
+      Number(limit),
+      String(includeArchived).toLowerCase() === 'true',
+    );
+  }
+
   @Post('messages')
   @UseGuards(JwtAuthGuard, PermissionsGuard)
   @Permissions('operations.write')

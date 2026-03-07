@@ -1,7 +1,12 @@
 ﻿import { useMemo, useState } from "react";
 import { operationsApi } from "../../../api/operations.api";
-import { useOperationsFeed, useOperationsTasks } from "../../../hooks/useOperations";
+import {
+  useOperationsFeed,
+  useOperationsMessages,
+  useOperationsTasks,
+} from "../../../hooks/useOperations";
 import { useMe } from "../../../hooks/useMe";
+import { hasRolePermission } from "../../../utils/rolePolicy";
 import {
   DotTag,
   Hero,
@@ -50,6 +55,24 @@ type FeedPayload = {
   feed?: FeedItem[];
 };
 
+type OperationsMessage = {
+  id: string;
+  title: string;
+  body: string;
+  tone: "default" | "warn" | "ok" | "danger";
+  audience: string;
+  isPinned: boolean;
+  isActive: boolean;
+  mutable?: boolean;
+  createdAt: string;
+  updatedAt: string;
+  createdByName?: string;
+};
+
+type MessagesPayload = {
+  messages?: OperationsMessage[];
+};
+
 type LegacyFeedItem = {
   id: string;
   kind: "MATCH" | "INJURY";
@@ -77,6 +100,26 @@ type LegacyRecentData = {
     userId?: string;
   }>;
 };
+
+const PRIMARY_ROLES = ["ADMIN", "MANAGER", "PLAYER", "MEMBER"] as const;
+const SUB_ROLES = ["COACH", "PHYSIO", "AGENT", "NUTRITIONIST", "PITCH_MANAGER"] as const;
+type PrimaryRole = (typeof PRIMARY_ROLES)[number];
+type SubRole = (typeof SUB_ROLES)[number];
+
+function normalizePrimaryRole(value: unknown): PrimaryRole {
+  const role = String(value || "").toUpperCase();
+  if (PRIMARY_ROLES.includes(role as PrimaryRole)) return role as PrimaryRole;
+  return "MEMBER";
+}
+
+function normalizeSubRoles(value: unknown): SubRole[] {
+  if (!Array.isArray(value)) return [];
+  const picked: SubRole[] = [];
+  for (const role of SUB_ROLES) {
+    if (value.includes(role)) picked.push(role);
+  }
+  return picked;
+}
 
 function toDateValue(input?: string | null) {
   if (!input) return 0;
@@ -112,17 +155,26 @@ export default function MessagesPage() {
   const [actionInfo, setActionInfo] = useState<string | null>(null);
 
   const meQuery = useMe();
-  const tasksQuery = useOperationsTasks(24);
-  const feedQuery = useOperationsFeed(40);
   const clubId = localStorage.getItem("activeClubId") || "";
 
   const meData = (meQuery.data || {}) as {
-    activeMembership?: { primary?: string } | null;
+    activeMembership?: { primary?: string; subRoles?: string[] } | null;
   };
-  const canManage = ["ADMIN", "MANAGER"].includes(String(meData.activeMembership?.primary || ""));
+
+  const primaryRole = normalizePrimaryRole(meData.activeMembership?.primary);
+  const subRoles = normalizeSubRoles(meData.activeMembership?.subRoles);
+
+  const canReadMessages = hasRolePermission(primaryRole, subRoles, "membership.self.read");
+  const canReadOperations = hasRolePermission(primaryRole, subRoles, "operations.read");
+  const canManage = hasRolePermission(primaryRole, subRoles, "operations.write");
+
+  const tasksQuery = useOperationsTasks(24, clubId, canReadOperations);
+  const feedQuery = useOperationsFeed(40, clubId, canReadOperations);
+  const messagesQuery = useOperationsMessages(60, clubId, !canReadOperations && canReadMessages);
 
   const tasksData = (tasksQuery.data || {}) as TasksPayload;
   const feedData = (feedQuery.data || {}) as FeedPayload;
+  const messagesData = (messagesQuery.data || {}) as MessagesPayload;
 
   const feed = useMemo(() => {
     const rows = feedData.feed || [];
@@ -160,6 +212,7 @@ export default function MessagesPage() {
     return [...matches, ...injuries].sort((a, b) => b.ts - a.ts);
   }, [feedData.feed, feedQuery.data]);
 
+  const messages = messagesData.messages || [];
   const tasks = tasksData.tasks || [];
   const counts = tasksData.counts || {};
 
@@ -247,6 +300,80 @@ export default function MessagesPage() {
     } finally {
       setActionBusy(false);
     }
+  }
+
+  if (!canReadOperations) {
+    if (messagesQuery.isLoading || meQuery.isLoading) {
+      return (
+        <PageWrap>
+          <div
+            className="rounded-3xl border bg-white/60 px-5 py-6 text-sm font-semibold text-[rgb(var(--muted))]"
+            style={{ borderColor: adminCardBorder }}
+          >
+            Loading messages...
+          </div>
+        </PageWrap>
+      );
+    }
+
+    return (
+      <PageWrap>
+        <Hero
+          title="Club Messages"
+          subtitle="Internal announcements shared by management."
+          right={<DotTag>INBOX</DotTag>}
+        />
+
+        {(!clubId || !canReadMessages || messagesQuery.isError) && (
+          <div
+            className="rounded-2xl border px-4 py-3 text-sm font-semibold text-rose-700"
+            style={{ borderColor: adminCardBorder, background: "rgba(255,255,255,.65)" }}
+          >
+            {!clubId
+              ? "No active club selected."
+              : !canReadMessages
+                ? "You do not have permission to read club messages."
+                : "Unable to load messages."}
+          </div>
+        )}
+
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          <Stat label="Messages" value={messages.length} />
+          <Stat label="Pinned" value={messages.filter((item) => item.isPinned).length} />
+          <Stat label="Audience ALL" value={messages.filter((item) => item.audience === "ALL").length} />
+        </div>
+
+        <Section title="Inbox" subtitle="Latest active announcements for your role context.">
+          {!messages.length ? (
+            <p className="text-sm text-[rgb(var(--muted))]">No messages available right now.</p>
+          ) : (
+            <div className="space-y-3">
+              {messages.map((message) => (
+                <article
+                  key={message.id}
+                  className="rounded-2xl border bg-white/72 px-3 py-3"
+                  style={{ borderColor: adminCardBorder }}
+                >
+                  <div className="mb-1 flex items-center justify-between gap-2">
+                    <p className="text-sm font-semibold text-[rgb(var(--text))]">{message.title}</p>
+                    <div className="flex items-center gap-2">
+                      <DotTag tone={message.tone}>{message.tone}</DotTag>
+                      {message.isPinned ? <DotTag tone="warn">PINNED</DotTag> : null}
+                      <span className="text-[11px] text-[rgb(var(--muted))]">{formatDateTime(message.createdAt)}</span>
+                    </div>
+                  </div>
+                  <p className="text-xs text-[rgb(var(--muted))]">{message.body}</p>
+                  <p className="mt-1 text-[11px] text-[rgb(var(--muted))]">
+                    Audience {message.audience || "ALL"}
+                    {message.createdByName ? ` | by ${message.createdByName}` : ""}
+                  </p>
+                </article>
+              ))}
+            </div>
+          )}
+        </Section>
+      </PageWrap>
+    );
   }
 
   if (tasksQuery.isLoading || feedQuery.isLoading) {
@@ -513,4 +640,3 @@ export default function MessagesPage() {
     </PageWrap>
   );
 }
-

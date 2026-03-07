@@ -53,6 +53,13 @@ export const operationsApi = {
       .get(`/clubs/${encodeURIComponent(clubId)}/operations/feed`, { params: { limit } })
       .then((r) => r.data),
 
+  messages: (clubId: string, limit = 30, includeArchived = false) =>
+    http
+      .get(`/clubs/${encodeURIComponent(clubId)}/operations/messages`, {
+        params: { limit, includeArchived },
+      })
+      .then((r) => r.data),
+
   createTask: (clubId: string, payload: CreateTaskPayload) =>
     http
       .post(`/clubs/${encodeURIComponent(clubId)}/operations/tasks`, payload)
