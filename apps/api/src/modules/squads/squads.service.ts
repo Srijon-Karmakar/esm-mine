@@ -146,7 +146,11 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateSquadDto, AddSquadMemberDto } from './dto';
-import { Prisma } from '@prisma/client';
+
+function isUniqueConstraintError(e: unknown): boolean {
+  if (!e || typeof e !== 'object') return false;
+  return (e as { code?: unknown }).code === 'P2002';
+}
 
 @Injectable()
 export class SquadsService {
@@ -177,12 +181,9 @@ export class SquadsService {
         },
       });
       return squad;
-    } catch (e: any) {
+    } catch (e: unknown) {
       // ✅ Clean handling for duplicate squad name
-      if (
-        e instanceof Prisma.PrismaClientKnownRequestError &&
-        e.code === 'P2002'
-      ) {
+      if (isUniqueConstraintError(e)) {
         throw new BadRequestException('Squad already exists in this club');
       }
       throw e;
@@ -245,11 +246,8 @@ export class SquadsService {
           position: dto.position?.trim() || null,
         },
       });
-    } catch (e: any) {
-      if (
-        e instanceof Prisma.PrismaClientKnownRequestError &&
-        e.code === 'P2002'
-      ) {
+    } catch (e: unknown) {
+      if (isUniqueConstraintError(e)) {
         throw new BadRequestException('User is already in this squad');
       }
       throw e;

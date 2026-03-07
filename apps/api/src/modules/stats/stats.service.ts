@@ -5,7 +5,6 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { PrimaryRole } from '@prisma/client';
 import { StatsEngineService } from './stats-engine.service';
 
 type Metric = 'goals' | 'assists' | 'minutes' | 'yellow' | 'red';
@@ -26,13 +25,10 @@ export class StatsService {
     return m;
   }
 
-  private assertManageRole(primary: PrimaryRole) {
-    const allowed = new Set<PrimaryRole>([
-      PrimaryRole.ADMIN,
-      PrimaryRole.MANAGER,
-    ]);
-    if (!allowed.has(primary))
+  private assertManageRole(primary: string | null | undefined) {
+    if (primary !== 'ADMIN' && primary !== 'MANAGER') {
       throw new ForbiddenException('Insufficient role');
+    }
   }
 
   private parseRange(from?: string, to?: string) {

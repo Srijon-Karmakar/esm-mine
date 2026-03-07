@@ -1,9 +1,18 @@
 // src/modules/stats/stats-engine.service.ts
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { MatchEventType, MatchStatus } from '@prisma/client';
 
 type MinutesMap = Record<string, number>;
+type MatchStatus = 'SCHEDULED' | 'LIVE' | 'FINISHED' | 'CANCELLED';
+type MatchEventType =
+  | 'GOAL'
+  | 'ASSIST'
+  | 'YELLOW'
+  | 'RED'
+  | 'SUB_ON'
+  | 'SUB_OFF'
+  | 'INJURY'
+  | 'NOTE';
 
 @Injectable()
 export class StatsEngineService {
@@ -13,7 +22,7 @@ export class StatsEngineService {
     status: MatchStatus,
     maxMinute: number | null,
   ) {
-    if (status === MatchStatus.FINISHED) return Math.max(90, maxMinute ?? 90);
+    if (status === 'FINISHED') return Math.max(90, maxMinute ?? 90);
     return 90;
   }
 
@@ -42,8 +51,8 @@ export class StatsEngineService {
       if (!e.playerId) continue;
       if (typeof e.minute !== 'number') continue;
 
-      if (e.type === MatchEventType.SUB_ON) subOn.set(e.playerId, e.minute);
-      if (e.type === MatchEventType.SUB_OFF) subOff.set(e.playerId, e.minute);
+      if (e.type === 'SUB_ON') subOn.set(e.playerId, e.minute);
+      if (e.type === 'SUB_OFF') subOff.set(e.playerId, e.minute);
     }
 
     const minutes: MinutesMap = {};
@@ -77,10 +86,22 @@ export class StatsEngineService {
     });
     if (!match) throw new NotFoundException('Match not found');
 
-    const events = await this.prisma.matchEvent.findMany({
+    const eventsRaw = await this.prisma.matchEvent.findMany({
       where: { matchId, clubId },
       select: { type: true, minute: true, playerId: true, assistId: true },
     });
+
+    const events: Array<{
+      type: MatchEventType;
+      minute: number | null;
+      playerId: string | null;
+      assistId: string | null;
+    }> = eventsRaw.map((e) => ({
+      type: String(e.type) as MatchEventType,
+      minute: typeof e.minute === 'number' ? e.minute : null,
+      playerId: e.playerId ? String(e.playerId) : null,
+      assistId: e.assistId ? String(e.assistId) : null,
+    }));
 
     const maxMinute =
       events.reduce(
@@ -95,12 +116,22 @@ export class StatsEngineService {
 
     const lineupIds = lineups.map((l) => l.id);
 
-    const lineupPlayers = lineupIds.length
+    const lineupPlayersRaw = lineupIds.length
       ? await this.prisma.matchLineupPlayer.findMany({
           where: { lineupId: { in: lineupIds } },
           select: { lineupId: true, userId: true, slot: true },
         })
       : [];
+
+    const lineupPlayers: Array<{
+      lineupId: string;
+      userId: string;
+      slot: 'STARTING' | 'BENCH';
+    }> = lineupPlayersRaw.map((p) => ({
+      lineupId: String(p.lineupId),
+      userId: String(p.userId),
+      slot: p.slot === 'BENCH' ? 'BENCH' : 'STARTING',
+    }));
 
     const sideByLineup = new Map(lineups.map((l) => [l.id, l.side as string]));
 
@@ -111,7 +142,7 @@ export class StatsEngineService {
     }));
 
     const minutesMap = this.computeMinutesForMatch({
-      matchStatus: match.status,
+      matchStatus: String(match.status) as MatchStatus,
       maxEventMinute: maxMinute,
       lineupPlayers: allPlayersForMinutes,
       events: events.map((e) => ({
@@ -127,7 +158,9 @@ export class StatsEngineService {
       if (!lpByUser.has(lp.userId)) lpByUser.set(lp.userId, lp);
     }
 
-    const userIds = Array.from(new Set(lineupPlayers.map((p) => p.userId)));
+    const userIds: string[] = Array.from(
+      new Set(lineupPlayers.map((p) => p.userId)),
+    );
 
     // Pre-count stats with maps (faster)
     const goalsByUser = new Map<string, number>();
@@ -136,20 +169,20 @@ export class StatsEngineService {
     const redByUser = new Map<string, number>();
 
     for (const e of events) {
-      if (e.type === MatchEventType.GOAL && e.playerId) {
+      if (e.type === 'GOAL' && e.playerId) {
         goalsByUser.set(e.playerId, (goalsByUser.get(e.playerId) ?? 0) + 1);
       }
 
       // ✅ Assist should count for assistId (not playerId)
-      if (e.type === MatchEventType.ASSIST && e.assistId) {
+      if (e.type === 'ASSIST' && e.assistId) {
         assistsByUser.set(e.assistId, (assistsByUser.get(e.assistId) ?? 0) + 1);
       }
 
-      if (e.type === MatchEventType.YELLOW && e.playerId) {
+      if (e.type === 'YELLOW' && e.playerId) {
         yellowByUser.set(e.playerId, (yellowByUser.get(e.playerId) ?? 0) + 1);
       }
 
-      if (e.type === MatchEventType.RED && e.playerId) {
+      if (e.type === 'RED' && e.playerId) {
         redByUser.set(e.playerId, (redByUser.get(e.playerId) ?? 0) + 1);
       }
     }
