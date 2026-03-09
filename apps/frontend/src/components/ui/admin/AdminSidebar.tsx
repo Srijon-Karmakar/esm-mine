@@ -38,7 +38,7 @@ function initials(name: string) {
     return (a + b).toUpperCase();
 }
 
-const cardBorder = "rgba(var(--primary-2), .14)";
+const cardBorder = "rgba(var(--border), .92)";
 const logoutBorder = "rgba(220, 38, 38, .42)";
 
 const adminNav = [
@@ -193,11 +193,9 @@ export default function AdminSidebar({
                 )
             }
             style={({ isActive }) => ({
-                borderColor: isActive ? "rgba(var(--primary), .72)" : cardBorder,
-                background: isActive
-                    ? "linear-gradient(135deg, rgba(var(--primary), 1), rgba(var(--primary), .82))"
-                    : "rgba(255,255,255,0.55)",
-                boxShadow: isActive ? "0 14px 30px rgba(var(--primary), .28)" : undefined,
+                borderColor: isActive ? "rgba(var(--primary), .92)" : cardBorder,
+                background: isActive ? "rgb(var(--primary))" : "rgba(255,255,255,0.55)",
+                boxShadow: isActive ? "0 14px 30px rgba(var(--primary), .34)" : undefined,
             })}
         >
             {({ isActive }) => (
@@ -217,7 +215,7 @@ export default function AdminSidebar({
                             className="grid h-9 w-9 place-items-center rounded-lg border transition"
                             style={{
                                 borderColor: isActive ? "rgba(var(--primary-2), .35)" : cardBorder,
-                                background: isActive ? "rgba(255,255,255,.18)" : "rgba(255,255,255,.64)",
+                                background: isActive ? "rgba(255,255,255,.88)" : "rgba(255,255,255,.64)",
                                 color: isActive ? "rgb(var(--primary-2))" : "rgb(var(--text))",
                                 boxShadow: isActive ? "0 10px 26px rgba(20,24,32,0.22)" : undefined,
                             }}

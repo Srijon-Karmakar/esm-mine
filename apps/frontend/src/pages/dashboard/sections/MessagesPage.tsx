@@ -102,7 +102,7 @@ type LegacyRecentData = {
 };
 
 const PRIMARY_ROLES = ["ADMIN", "MANAGER", "PLAYER", "MEMBER"] as const;
-const SUB_ROLES = ["COACH", "PHYSIO", "AGENT", "NUTRITIONIST", "PITCH_MANAGER"] as const;
+const SUB_ROLES = ["COACH", "PHYSIO", "AGENT", "NUTRITIONIST", "PITCH_MANAGER", "CAPTAIN"] as const;
 type PrimaryRole = (typeof PRIMARY_ROLES)[number];
 type SubRole = (typeof SUB_ROLES)[number];
 

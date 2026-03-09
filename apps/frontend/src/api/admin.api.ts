@@ -6,7 +6,8 @@ export type SubRole =
   | "PHYSIO"
   | "COACH"
   | "NUTRITIONIST"
-  | "PITCH_MANAGER";
+  | "PITCH_MANAGER"
+  | "CAPTAIN";
 
 export type MatchStatus = "SCHEDULED" | "LIVE" | "FINISHED" | "CANCELLED";
 export type LeaderboardMetric = "goals" | "assists" | "minutes";
@@ -147,6 +148,7 @@ export type ClubPlayer = {
     fullName?: string | null;
   };
   membershipId: string;
+  isCaptain?: boolean;
   profile?: {
     positions?: string[];
   } | null;

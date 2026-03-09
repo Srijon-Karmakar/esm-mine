@@ -51,6 +51,15 @@ export default function SettingsPage() {
       data.activeClubId !== localActiveClubId
   );
 
+  const activeClubStatValue =
+    activeClubId && activeClubId !== "-" ? (
+      <span className="inline-block max-w-full break-all font-mono text-xs leading-5">
+        {activeClubId}
+      </span>
+    ) : (
+      "-"
+    );
+
   if (meQuery.isLoading) {
     return (
       <PageWrap>
@@ -83,7 +92,7 @@ export default function SettingsPage() {
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         <Stat label="Memberships" value={memberships.length} />
-        <Stat label="Active Club ID" value={activeClubId} />
+        <Stat label="Active Club ID" value={activeClubStatValue} />
         <Stat label="Primary Role" value={currentMembership?.primary || data.activeMembership?.primary || "-"} />
         <Stat label="Sub Roles" value={(currentMembership?.subRoles || data.activeMembership?.subRoles || []).length} />
         <Stat label="Context Sync" value={roleMismatch ? "Mismatch" : "Synced"} />
@@ -138,7 +147,7 @@ export default function SettingsPage() {
                     </DotTag>
                   </div>
                 </div>
-                <p className="text-xs text-[rgb(var(--muted))]">
+                <p className="text-xs text-[rgb(var(--muted))] [overflow-wrap:anywhere]">
                   Club ID: {membership.clubId} | Slug: {membership.club?.slug || "-"}
                 </p>
               </article>
@@ -154,7 +163,13 @@ function Line({ label, value, mono = false }: { label: string; value: string; mo
   return (
     <div className="mb-2 rounded-2xl border bg-white/72 px-3 py-3" style={{ borderColor: adminCardBorder }}>
       <p className="text-xs text-[rgb(var(--muted))]">{label}</p>
-      <p className={mono ? "font-mono text-xs text-[rgb(var(--text))]" : "text-sm font-semibold text-[rgb(var(--text))]"}>
+      <p
+        className={
+          mono
+            ? "font-mono text-xs text-[rgb(var(--text))] break-all leading-5"
+            : "text-sm font-semibold text-[rgb(var(--text))] [overflow-wrap:anywhere]"
+        }
+      >
         {value}
       </p>
     </div>
@@ -165,7 +180,7 @@ function LineDark({ label, value }: { label: string; value: string }) {
   return (
     <div className="mb-2 rounded-2xl border border-white/15 bg-white/5 px-3 py-3">
       <p className="text-xs text-white/60">{label}</p>
-      <p className="text-sm font-semibold text-white">{value}</p>
+      <p className="text-sm font-semibold text-white [overflow-wrap:anywhere]">{value}</p>
     </div>
   );
 }

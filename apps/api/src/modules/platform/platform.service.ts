@@ -17,6 +17,7 @@ const ROLE_CATALOG = [
   'AGENT',
   'NUTRITIONIST',
   'PITCH_MANAGER',
+  'CAPTAIN',
 ] as const;
 
 type RoleKey = (typeof ROLE_CATALOG)[number];

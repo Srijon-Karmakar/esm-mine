@@ -28,6 +28,7 @@ export type SidebarUser = {
   role?: string;
   position?: string;
   avatarUrl?: string;
+  isCaptain?: boolean;
 };
 
 type MatchItem = {
@@ -155,7 +156,7 @@ export default function Sidebar({
     );
   }, [recentQuery.data]);
 
-  const cardBorder = "rgba(var(--primary-2), .14)";
+  const cardBorder = "rgba(var(--border), .92)";
   const logoutBorder = "rgba(220, 38, 38, .42)";
 
   const copyId = async () => {
@@ -193,11 +194,9 @@ export default function Sidebar({
         )
       }
       style={({ isActive }) => ({
-        borderColor: isActive ? "rgba(var(--primary), .72)" : cardBorder,
-        background: isActive
-          ? "linear-gradient(135deg, rgba(var(--primary), 1), rgba(var(--primary), .82))"
-          : "rgba(255,255,255,0.55)",
-        boxShadow: isActive ? "0 14px 30px rgba(var(--primary), .28)" : undefined,
+        borderColor: isActive ? "rgba(var(--primary), .92)" : cardBorder,
+        background: isActive ? "rgb(var(--primary))" : "rgba(255,255,255,0.55)",
+        boxShadow: isActive ? "0 14px 30px rgba(var(--primary), .34)" : undefined,
       })}
     >
       {({ isActive }) => (
@@ -217,7 +216,7 @@ export default function Sidebar({
               className="grid h-9 w-9 place-items-center rounded-lg border bg-white/60 transition"
               style={{
                 borderColor: isActive ? "rgba(var(--primary-2), .35)" : cardBorder,
-                background: isActive ? "rgba(255,255,255,.18)" : "rgba(255,255,255,.64)",
+                background: isActive ? "rgba(255,255,255,.88)" : "rgba(255,255,255,.64)",
                 color: isActive ? "rgb(var(--primary-2))" : "rgb(var(--text))",
                 boxShadow: isActive ? "0 10px 26px rgba(20,24,32,0.22)" : undefined,
               }}
@@ -343,6 +342,14 @@ export default function Sidebar({
         >
           Season: 24/25
         </span>
+        {user.isCaptain ? (
+          <span
+            className="rounded-full border bg-[rgba(var(--primary),.30)] px-2.5 py-1 text-[10px] font-extrabold text-[rgb(var(--text))]"
+            style={{ borderColor: "rgba(var(--primary), .55)" }}
+          >
+            Captain
+          </span>
+        ) : null}
       </div>
 
       <div className="mt-3 grid grid-cols-3 gap-2">

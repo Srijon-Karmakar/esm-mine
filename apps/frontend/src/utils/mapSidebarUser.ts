@@ -52,6 +52,14 @@ function pickRole(d: MeResponse) {
   return toRoleLabel(role);
 }
 
+function hasCaptainTag(d: MeResponse) {
+  const activeSubRoles =
+    d.activeMembership?.subRoles ||
+    d.memberships?.find((m) => m.clubId === d.activeClubId)?.subRoles ||
+    [];
+  return Array.isArray(activeSubRoles) && activeSubRoles.includes("CAPTAIN");
+}
+
 export function mapToSidebarUser(d: MeResponse): SidebarUser {
   const u = resolveUser(d);
   return {
@@ -61,5 +69,6 @@ export function mapToSidebarUser(d: MeResponse): SidebarUser {
     role: pickRole(d),
     position: u.position,
     avatarUrl: u.avatarUrl || u.avatar,
+    isCaptain: hasCaptainTag(d),
   };
 }

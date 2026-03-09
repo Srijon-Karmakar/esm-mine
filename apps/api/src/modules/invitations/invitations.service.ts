@@ -26,6 +26,15 @@ export class InvitationsService {
     primary: PrimaryRole,
     subRoles: SubRole[],
   ) {
+    const hasCaptainTag = Array.isArray(subRoles)
+      ? subRoles.includes(SubRole.CAPTAIN)
+      : false;
+    if (hasCaptainTag && primary !== PrimaryRole.PLAYER) {
+      throw new BadRequestException(
+        "Captain tag can only be assigned when primary role is PLAYER",
+      );
+    }
+
     try {
       const disabled = await (this.prisma as any).clubRoleSetting.findMany({
         where: { clubId, isEnabled: false },

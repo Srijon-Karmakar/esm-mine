@@ -66,6 +66,15 @@ export class ClubsService {
     primary: PrimaryRole,
     subRoles: SubRole[],
   ) {
+    const hasCaptainTag = Array.isArray(subRoles)
+      ? subRoles.includes(SubRole.CAPTAIN)
+      : false;
+    if (hasCaptainTag && primary !== PrimaryRole.PLAYER) {
+      throw new BadRequestException(
+        "Captain tag can only be assigned when primary role is PLAYER",
+      );
+    }
+
     const disabled = await this.getDisabledRoleKeySet(clubId);
     const primaryKey = this.normalizeRoleKey(primary);
     if (disabled.has(primaryKey)) {

@@ -35,7 +35,17 @@ type Ctx = {
 };
 
 const ALL_PRIMARY: PrimaryRole[] = ["MEMBER", "PLAYER", "MANAGER", "ADMIN"];
-const ALL_SUB: SubRole[] = ["COACH", "PHYSIO", "AGENT", "NUTRITIONIST", "PITCH_MANAGER"];
+const ALL_SUB: SubRole[] = ["COACH", "PHYSIO", "AGENT", "NUTRITIONIST", "PITCH_MANAGER", "CAPTAIN"];
+const CAPTAIN_SUB_ROLE: SubRole = "CAPTAIN";
+
+function canUseSubRole(primary: PrimaryRole, subRole: SubRole) {
+  if (subRole === CAPTAIN_SUB_ROLE) return primary === "PLAYER";
+  return true;
+}
+
+function sanitizeSubRolesForPrimary(primary: PrimaryRole, subRoles: SubRole[]) {
+  return (subRoles || []).filter((role) => canUseSubRole(primary, role));
+}
 
 function messageOf(e: unknown, fallback: string) {
   const err = e as { response?: { data?: { message?: string } }; message?: string };
@@ -103,6 +113,7 @@ export default function AdminMembers() {
     const managers = members.filter((member) => member.primary === "MANAGER").length;
     const membersOnly = members.filter((member) => member.primary === "MEMBER").length;
     const players = members.filter((member) => member.primary === "PLAYER").length;
+    const captains = members.filter((member) => member.subRoles.includes("CAPTAIN")).length;
     const coaches = members.filter((member) => member.subRoles.includes("COACH")).length;
     const physios = members.filter((member) => member.subRoles.includes("PHYSIO")).length;
     return {
@@ -111,6 +122,7 @@ export default function AdminMembers() {
       managers,
       membersOnly,
       players,
+      captains,
       coaches,
       physios,
     };
@@ -135,13 +147,19 @@ export default function AdminMembers() {
   const subRolesForSignup = (signup: PendingSignup): SubRole[] =>
     assignSubRolesByUserId[signup.id] ?? signup.pendingAssignment?.subRoles ?? [];
 
-  const toggleSignupSubRole = (signupId: string, role: SubRole, fallback: SubRole[]) => {
+  const toggleSignupSubRole = (
+    signupId: string,
+    role: SubRole,
+    fallback: SubRole[],
+    primary: PrimaryRole
+  ) => {
+    if (!canUseSubRole(primary, role)) return;
     setAssignSubRolesByUserId((prev) => {
       const current = prev[signupId] ?? fallback;
       const next = current.includes(role)
         ? current.filter((item) => item !== role)
         : [...current, role];
-      return { ...prev, [signupId]: next };
+      return { ...prev, [signupId]: sanitizeSubRolesForPrimary(primary, next) };
     });
   };
 
@@ -156,7 +174,7 @@ export default function AdminMembers() {
       await assignSignupToClub(clubId, {
         userId: signup.id,
         primary: roleForSignup(signup),
-        subRoles: subRolesForSignup(signup),
+        subRoles: sanitizeSubRolesForPrimary(roleForSignup(signup), subRolesForSignup(signup)),
       });
       setToast({
         type: "ok",
@@ -255,9 +273,10 @@ export default function AdminMembers() {
         </div>
       ) : null}
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-8">
         <Stat label="Members" value={counts.total} />
         <Stat label="Players" value={counts.players} />
+        <Stat label="Captains" value={counts.captains} />
         <Stat label="Role: MEMBER" value={counts.membersOnly} />
         <Stat label="Managers" value={counts.managers} />
         <Stat label="Admins" value={counts.admins} />
@@ -301,12 +320,20 @@ export default function AdminMembers() {
                     <div className="space-y-1">
                       <select
                         value={roleForSignup(signup)}
-                        onChange={(event) =>
+                        onChange={(event) => {
+                          const nextPrimary = event.target.value as PrimaryRole;
                           setAssignPrimaryByUserId((prev) => ({
                             ...prev,
-                            [signup.id]: event.target.value as PrimaryRole,
-                          }))
-                        }
+                            [signup.id]: nextPrimary,
+                          }));
+                          setAssignSubRolesByUserId((prev) => ({
+                            ...prev,
+                            [signup.id]: sanitizeSubRolesForPrimary(
+                              nextPrimary,
+                              prev[signup.id] ?? signup.pendingAssignment?.subRoles ?? []
+                            ),
+                          }));
+                        }}
                         disabled={!canAssignSignup || !canEditPrimary}
                         className={cx(
                           "w-full rounded-full border bg-white/80 px-3 py-2 text-xs font-semibold outline-none",
@@ -323,18 +350,31 @@ export default function AdminMembers() {
                       <div className="flex flex-wrap gap-1">
                         {ALL_SUB.map((subRole) => {
                           const active = selectedSubRoles.includes(subRole);
+                          const roleAllowed = canUseSubRole(roleForSignup(signup), subRole);
                           return (
                             <button
                               key={subRole}
                               type="button"
-                              onClick={() => toggleSignupSubRole(signup.id, subRole, signup.pendingAssignment?.subRoles || [])}
-                              disabled={!canAssignSignup || !canEditSubRoles}
+                              onClick={() =>
+                                toggleSignupSubRole(
+                                  signup.id,
+                                  subRole,
+                                  signup.pendingAssignment?.subRoles || [],
+                                  roleForSignup(signup)
+                                )
+                              }
+                              disabled={!canAssignSignup || !canEditSubRoles || !roleAllowed}
                               className={cx(
                                 "rounded-full border px-2.5 py-1 text-[10px] font-extrabold",
                                 active ? "bg-[rgba(var(--primary),.24)]" : "bg-white/70",
-                                (!canAssignSignup || !canEditSubRoles) && "cursor-not-allowed opacity-60"
+                                (!canAssignSignup || !canEditSubRoles || !roleAllowed) && "cursor-not-allowed opacity-60"
                               )}
                               style={{ borderColor: adminCardBorder }}
+                              title={
+                                !roleAllowed
+                                  ? "Captain can be assigned only when primary role is PLAYER"
+                                  : undefined
+                              }
                             >
                               {subRole}
                             </button>
@@ -380,10 +420,14 @@ export default function AdminMembers() {
               3. Use sub roles for specialist access (coach, physio, nutrition).
             </p>
             <p>
-              4. Prefer assigning pending users from this queue before manual edits.
+              4. Captain tag can only be assigned when primary role is{" "}
+              <span className="font-bold text-white">PLAYER</span>.
             </p>
             <p>
-              5. Multi-role dashboard switching is allowed only for{" "}
+              5. Prefer assigning pending users from this queue before manual edits.
+            </p>
+            <p>
+              6. Multi-role dashboard switching is allowed only for{" "}
               <span className="font-bold text-white">{MULTI_ROLE_SWITCH_PRIMARY_ALLOWLIST.join(" / ")}</span>.
             </p>
           </div>
@@ -457,7 +501,9 @@ function MemberCard({
   onRemove: (userId: string) => Promise<void>;
 }) {
   const [primary, setPrimary] = useState<PrimaryRole>(member.primary);
-  const [subRoles, setSubRoles] = useState<SubRole[]>(member.subRoles || []);
+  const [subRoles, setSubRoles] = useState<SubRole[]>(
+    sanitizeSubRolesForPrimary(member.primary, member.subRoles || [])
+  );
 
   const primaryDirty = primary !== member.primary;
   const subRolesDirty =
@@ -466,7 +512,13 @@ function MemberCard({
 
   const toggleSubRole = (subRole: SubRole) => {
     if (!canEditSubRoles) return;
-    setSubRoles((prev) => (prev.includes(subRole) ? prev.filter((item) => item !== subRole) : [...prev, subRole]));
+    if (!canUseSubRole(primary, subRole)) return;
+    setSubRoles((prev) => {
+      const next = prev.includes(subRole)
+        ? prev.filter((item) => item !== subRole)
+        : [...prev, subRole];
+      return sanitizeSubRolesForPrimary(primary, next);
+    });
   };
 
   return (
@@ -476,12 +528,19 @@ function MemberCard({
           <p className="truncate text-sm font-extrabold text-[rgb(var(--text))]">{member.user.fullName || "Unnamed"}</p>
           <p className="truncate text-xs text-[rgb(var(--muted))]">{member.user.email}</p>
           <p className="truncate text-xs text-[rgb(var(--muted))]">ID: {member.userId}</p>
+          <div className="mt-1 flex flex-wrap items-center gap-1.5">
+            {subRoles.includes("CAPTAIN") ? <DotTag tone="warn">CAPTAIN</DotTag> : null}
+          </div>
         </div>
 
         <div>
           <select
             value={primary}
-            onChange={(event) => setPrimary(event.target.value as PrimaryRole)}
+            onChange={(event) => {
+              const nextPrimary = event.target.value as PrimaryRole;
+              setPrimary(nextPrimary);
+              setSubRoles((prev) => sanitizeSubRolesForPrimary(nextPrimary, prev));
+            }}
             disabled={!canEditPrimary}
             className={cx(
               "w-full rounded-full border bg-white/80 px-3 py-2 text-xs font-semibold outline-none",
@@ -500,18 +559,24 @@ function MemberCard({
         <div className="flex flex-wrap gap-2">
           {ALL_SUB.map((subRole) => {
             const active = subRoles.includes(subRole);
+            const roleAllowed = canUseSubRole(primary, subRole);
             return (
               <button
                 key={subRole}
                 type="button"
                 onClick={() => toggleSubRole(subRole)}
-                disabled={!canEditSubRoles}
+                disabled={!canEditSubRoles || !roleAllowed}
                 className={cx(
                   "rounded-full border px-3 py-1 text-[11px] font-extrabold",
                   active ? "bg-[rgba(var(--primary),.24)]" : "bg-white/70",
-                  !canEditSubRoles && "cursor-not-allowed opacity-60"
+                  (!canEditSubRoles || !roleAllowed) && "cursor-not-allowed opacity-60"
                 )}
                 style={{ borderColor: adminCardBorder }}
+                title={
+                  !roleAllowed
+                    ? "Captain can be assigned only when primary role is PLAYER"
+                    : undefined
+                }
               >
                 {subRole}
               </button>
@@ -522,7 +587,9 @@ function MemberCard({
         <div className="flex items-center justify-end gap-2">
           <button
             type="button"
-            onClick={() => onSave(member.userId, primary, subRoles)}
+            onClick={() =>
+              onSave(member.userId, primary, sanitizeSubRolesForPrimary(primary, subRoles))
+            }
             disabled={!(canEditPrimary || canEditSubRoles) || !dirty || saving}
             className="rounded-full px-3 py-2 text-xs font-extrabold transition disabled:opacity-60"
             style={{

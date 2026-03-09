@@ -1,6 +1,6 @@
 import { type ReactNode } from "react";
 
-export const adminCardBorder = "rgba(var(--primary-2), .14)";
+export const adminCardBorder = "rgba(var(--border), .92)";
 export const adminCardBg =
   "linear-gradient(145deg, rgba(255,255,255,.70), rgba(255,255,255,.44) 62%, rgba(var(--primary), .10))";
 export const adminSoftBg =
@@ -46,7 +46,7 @@ export function formatCountdown(input?: string | null) {
 
 export function PageWrap({ children }: { children: ReactNode }) {
   return (
-    <div className="space-y-4 p-4 sm:p-6">
+    <div className="space-y-4 p-4 sm:space-y-5 sm:p-6">
       <div
         className="relative overflow-hidden rounded-[32px] border px-4 py-4 sm:px-6 sm:py-5"
         style={{
@@ -64,7 +64,7 @@ export function PageWrap({ children }: { children: ReactNode }) {
           className="pointer-events-none absolute -right-20 bottom-4 h-48 w-48 rounded-full blur-3xl"
           style={{ background: "rgba(var(--primary), .26)" }}
         />
-        <div className="relative z-10">{children}</div>
+        <div className="relative z-10 space-y-4 sm:space-y-5">{children}</div>
       </div>
     </div>
   );
@@ -167,14 +167,16 @@ export function Stat({
 }) {
   return (
     <article
-      className="rounded-2xl border px-4 py-3"
+      className="min-w-0 rounded-2xl border px-4 py-3"
       style={{
         borderColor: adminCardBorder,
         background: adminSoftBg,
       }}
     >
       <p className="text-xs text-[rgb(var(--muted))]">{label}</p>
-      <p className="mt-1 text-2xl font-semibold tracking-tight text-[rgb(var(--text))]">{value}</p>
+      <p className="mt-1 text-2xl font-semibold tracking-tight text-[rgb(var(--text))] [overflow-wrap:anywhere] break-words">
+        {value}
+      </p>
       {hint ? <p className="mt-1 text-xs text-[rgb(var(--muted))]">{hint}</p> : null}
     </article>
   );
@@ -218,7 +220,7 @@ export function DotTag({
 
   return (
     <span
-      className="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold"
+      className="inline-flex max-w-full flex-wrap items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold"
       style={{
         background: style.bg,
         borderColor: style.border,
@@ -226,7 +228,7 @@ export function DotTag({
       }}
     >
       <span className="h-1.5 w-1.5 rounded-full" style={{ background: style.dot }} />
-      {children}
+      <span className="max-w-full break-words">{children}</span>
     </span>
   );
 }

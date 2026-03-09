@@ -20,7 +20,7 @@ const SUBROLE_PRIORITY: SubRole[] = [
 const PRIMARY_PRIORITY: PrimaryRole[] = ["ADMIN", "MANAGER", "PLAYER", "MEMBER"];
 
 const DASHBOARD_ROLE_TO_PATH: Record<DashboardRole, string> = {
-  ADMIN: "/admin",
+  ADMIN: "/dashboard/admin",
   MANAGER: "/dashboard/manager",
   PLAYER: "/dashboard/player",
   MEMBER: "/dashboard/onboarding",
@@ -29,6 +29,7 @@ const DASHBOARD_ROLE_TO_PATH: Record<DashboardRole, string> = {
   AGENT: "/dashboard/agent",
   NUTRITIONIST: "/dashboard/nutrition",
   PITCH_MANAGER: "/dashboard/pitch",
+  CAPTAIN: "/dashboard/player",
 };
 
 function normalizePrimaryRole(value: unknown): PrimaryRole {

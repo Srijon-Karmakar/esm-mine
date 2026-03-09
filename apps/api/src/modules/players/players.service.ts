@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { UpsertPlayerProfileDto } from './dto';
-import { PrimaryRole } from '@prisma/client';
+import { PrimaryRole, SubRole } from '@prisma/client';
 
 @Injectable()
 export class PlayersService {
@@ -84,6 +84,9 @@ export class PlayersService {
     return memberships.map((m) => ({
       user: m.user,
       membershipId: m.id,
+      isCaptain: Array.isArray(m.subRoles)
+        ? m.subRoles.includes(SubRole.CAPTAIN)
+        : false,
       profile: profileMap.get(m.userId) || null,
     }));
   }

@@ -509,6 +509,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
   Activity,
+  BadgeCheck,
+  Building2,
   CalendarDays,
   Dumbbell,
   HeartPulse,
@@ -911,6 +913,33 @@ export default function AppShell() {
     return pathForDashboardRole(dashboardRole as DashboardRole);
   }, [dashboardRole]);
 
+  const activeClubDisplay = useMemo(() => {
+    const memberships = Array.isArray((meData as any)?.memberships) ? (meData as any).memberships : [];
+    const activeClubId =
+      String((meData as any)?.activeClubId || localStorage.getItem("activeClubId") || "").trim();
+    const activeMembership =
+      (meData as any)?.activeMembership ||
+      memberships.find((membership: any) => membership?.clubId === activeClubId) ||
+      memberships[0] ||
+      null;
+    const rawClub = activeMembership?.club;
+    const clubName =
+      (typeof rawClub === "string" ? rawClub : rawClub?.name) ||
+      (user.clubName && user.clubName !== "-" ? user.clubName : "");
+    const clubSlug = typeof rawClub === "object" && rawClub?.slug ? String(rawClub.slug) : "";
+    const clubId = String(activeMembership?.clubId || activeClubId || "").trim();
+    const role = String(activeMembership?.primary || "").trim().toUpperCase();
+    const hasClub = Boolean(clubName || clubId);
+
+    return {
+      hasClub,
+      clubName: clubName || "No Club Assigned",
+      clubSlug,
+      clubId,
+      role: role ? formatDashboardRole(role as DashboardRole) : "",
+    };
+  }, [meData, user.clubName]);
+
   const topNav = useMemo(
     () => topNavByRole[dashboardRole] || defaultTopNav,
     [dashboardRole]
@@ -1135,6 +1164,43 @@ export default function AppShell() {
                     </div>
 
                     <div className="flex items-center gap-2">
+                      <div
+                        className="hidden lg:block rounded-2xl px-3 py-2"
+                        style={{
+                          background:
+                            "linear-gradient(138deg, rgba(255,255,255,0.72), rgba(255,255,255,0.38))",
+                          border: `1px solid ${GLASS_BORDER}`,
+                          boxShadow: "0 12px 26px rgba(20,24,32,0.10)",
+                        }}
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <div
+                            className="grid h-8 w-8 place-items-center rounded-xl"
+                            style={{
+                              background: activeClubDisplay.hasClub
+                                ? "linear-gradient(140deg, rgba(var(--primary),.95), rgba(var(--primary),.74))"
+                                : "linear-gradient(140deg, rgba(148,163,184,.9), rgba(100,116,139,.8))",
+                              border: `1px solid ${GLASS_BORDER_STRONG}`,
+                              color: "rgb(var(--primary-2))",
+                            }}
+                          >
+                            {activeClubDisplay.hasClub ? <BadgeCheck size={16} /> : <Building2 size={16} />}
+                          </div>
+                          <div className="min-w-0 max-w-[210px]">
+                            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[rgb(var(--muted))]">
+                              Current Club
+                            </p>
+                            <p className="truncate text-sm font-extrabold text-[rgb(var(--text))]">
+                              {activeClubDisplay.clubName}
+                            </p>
+                            <p className="truncate text-[10px] text-[rgb(var(--muted))]">
+                              {activeClubDisplay.clubSlug || activeClubDisplay.clubId || "Waiting for assignment"}
+                              {activeClubDisplay.role ? ` - ${activeClubDisplay.role}` : ""}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
                       <div className="hidden sm:block text-right">
                         <p className="text-sm font-semibold text-[rgb(var(--text))]">
                           EsportM  -  {userLoading ? "Loading..." : formatDashboardRole(dashboardRole as DashboardRole)}
@@ -1229,6 +1295,39 @@ export default function AppShell() {
 
                 {/* Scroll only main */}
                 <main className="min-w-0 flex-1 overflow-y-auto pr-1">
+                  <div
+                    className="mb-4 rounded-2xl px-4 py-3 lg:hidden"
+                    style={{
+                      background:
+                        "linear-gradient(138deg, rgba(255,255,255,0.72), rgba(255,255,255,0.42))",
+                      border: `1px solid ${GLASS_BORDER}`,
+                      boxShadow: "0 12px 26px rgba(20,24,32,0.10)",
+                    }}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <div
+                        className="grid h-8 w-8 shrink-0 place-items-center rounded-xl"
+                        style={{
+                          background: activeClubDisplay.hasClub
+                            ? "linear-gradient(140deg, rgba(var(--primary),.95), rgba(var(--primary),.74))"
+                            : "linear-gradient(140deg, rgba(148,163,184,.9), rgba(100,116,139,.8))",
+                          border: `1px solid ${GLASS_BORDER_STRONG}`,
+                          color: "rgb(var(--primary-2))",
+                        }}
+                      >
+                        {activeClubDisplay.hasClub ? <BadgeCheck size={16} /> : <Building2 size={16} />}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[rgb(var(--muted))]">
+                          Current Club
+                        </p>
+                        <p className="truncate text-sm font-extrabold text-[rgb(var(--text))]">
+                          {activeClubDisplay.clubName}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
                   {/* quick actions (mobile) */}
                   <div className="mb-4 flex justify-end gap-2 sm:hidden">
                     <button

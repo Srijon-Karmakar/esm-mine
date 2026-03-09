@@ -174,6 +174,7 @@ export const SUB_ROLE_PERMISSIONS: Record<SubRole, readonly RolePermission[]> = 
     'matches.read',
     'operations.read',
   ],
+  [SubRole.CAPTAIN]: [],
 };
 
 export type RoleAccessShape = {
