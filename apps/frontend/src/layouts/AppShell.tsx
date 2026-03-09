@@ -506,11 +506,25 @@
 
 // src/layouts/AppShell.tsx
 import { useEffect, useMemo, useState } from "react";
-import { Outlet, useNavigate } from "react-router-dom";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import {
+  Activity,
+  CalendarDays,
+  Dumbbell,
+  HeartPulse,
+  Home,
+  LayoutDashboard,
+  LogOut,
+  MessageSquare,
+  Settings2,
+  ShoppingBag,
+  Users2,
+} from "lucide-react";
 
 import Sidebar from "../components/ui/Sidebar";
 import type { SidebarItem, SidebarUser } from "../components/ui/Sidebar";
 import ConfirmModal from "../components/ui/ConfirmModal";
+import type { PrimaryRole, SubRole } from "../api/admin.api";
 
 import { ThemePanel } from "../theme/ThemePanel";
 import { useMe } from "../hooks/useMe";
@@ -522,6 +536,7 @@ import {
   pathForDashboardRole,
   type DashboardRole,
 } from "../utils/dashboardRouting";
+import { listRolePermissions, type RolePermission } from "../utils/rolePolicy";
 
 type NavKey =
   | "dashboard"
@@ -543,6 +558,13 @@ type DashboardRoleKey =
   | "AGENT"
   | "NUTRITIONIST"
   | "PITCH_MANAGER";
+
+type AppShellOutletContext = {
+  clubId: string;
+  role: PrimaryRole;
+  subRoles: SubRole[];
+  permissions: RolePermission[];
+};
 
 const defaultTopNav: { key: NavKey; label: string }[] = [
   { key: "dashboard", label: "Dashboard" },
@@ -616,8 +638,14 @@ const MARKETPLACE_SIDEBAR_ITEM: SidebarItem = {
 
 const sectionItemsByRole: Partial<Record<DashboardRoleKey, SidebarItem[]>> = {
   PLAYER: defaultSectionItems,
-  MANAGER: defaultSectionItems,
-  ADMIN: defaultSectionItems,
+  MANAGER: [
+    { label: "Members", to: "/dashboard/members" },
+    ...defaultSectionItems,
+  ],
+  ADMIN: [
+    { label: "Members", to: "/dashboard/members" },
+    ...defaultSectionItems,
+  ],
   COACH: [
     { label: "Training", to: "/dashboard/training" },
     { label: "Matches", to: "/dashboard/matches" },
@@ -666,6 +694,29 @@ const sectionItemsByRole: Partial<Record<DashboardRoleKey, SidebarItem[]>> = {
 
 function cx(...s: Array<string | false | undefined>) {
   return s.filter(Boolean).join(" ");
+}
+
+function resolveNavKeyFromPath(pathname: string, dashboardHome: string): NavKey {
+  if (pathname === dashboardHome || pathname.startsWith(`${dashboardHome}/`)) return "dashboard";
+  if (pathname.startsWith("/dashboard/training")) return "training";
+  if (pathname.startsWith("/dashboard/matches")) return "calendar";
+  if (pathname.startsWith("/dashboard/stats")) return "squad";
+  if (pathname.startsWith("/dashboard/medical")) return "wearables";
+  if (pathname.startsWith("/dashboard/messages") || pathname.startsWith("/dashboard/social")) return "reviews";
+  if (pathname.startsWith("/dashboard/settings")) return "settings";
+  return "dashboard";
+}
+
+function iconForSidebarPath(path: string) {
+  if (path === "/marketplace") return <ShoppingBag size={14} />;
+  if (path.includes("/training")) return <Dumbbell size={14} />;
+  if (path.includes("/matches")) return <CalendarDays size={14} />;
+  if (path.includes("/stats")) return <Activity size={14} />;
+  if (path.includes("/medical")) return <HeartPulse size={14} />;
+  if (path.includes("/messages") || path.includes("/social")) return <MessageSquare size={14} />;
+  if (path.includes("/members")) return <Users2 size={14} />;
+  if (path.includes("/settings")) return <Settings2 size={14} />;
+  return <LayoutDashboard size={14} />;
 }
 
 /**
@@ -796,6 +847,7 @@ const FALLBACK_USER: SidebarUser = {
 };
 
 export default function AppShell() {
+  const location = useLocation();
   const navigate = useNavigate();
   const { data: meData, isLoading: userLoading, error: meError } = useMe();
 
@@ -855,12 +907,26 @@ export default function AppShell() {
   }, [switchableRoles]);
 
   const dashboardHome = useMemo(() => {
+    if (dashboardRole === "ADMIN") return "/dashboard/admin";
     return pathForDashboardRole(dashboardRole as DashboardRole);
   }, [dashboardRole]);
 
   const topNav = useMemo(
     () => topNavByRole[dashboardRole] || defaultTopNav,
     [dashboardRole]
+  );
+  const topNavTargets = useMemo<Record<NavKey, string>>(
+    () => ({
+      dashboard: dashboardHome,
+      squad: "/dashboard/stats",
+      training: "/dashboard/training",
+      wearables: "/dashboard/medical",
+      contracts: "/dashboard/settings",
+      calendar: "/dashboard/matches",
+      reviews: "/dashboard/messages",
+      settings: "/dashboard/settings",
+    }),
+    [dashboardHome]
   );
 
   const sectionItems = useMemo(() => {
@@ -884,18 +950,50 @@ export default function AppShell() {
   const sidebarItems: SidebarItem[] = useMemo(() => {
     const source = [{ label: "Dashboard", to: dashboardHome }, ...sectionItems];
     const seen = new Set<string>();
-    return source.filter((item) => {
-      if (seen.has(item.to)) return false;
-      seen.add(item.to);
-      return true;
-    });
+    return source
+      .filter((item) => {
+        if (seen.has(item.to)) return false;
+        seen.add(item.to);
+        return true;
+      })
+      .map((item) => ({
+        ...item,
+        icon: item.icon ?? iconForSidebarPath(item.to),
+      }));
   }, [dashboardHome, sectionItems]);
 
+  const outletContext = useMemo<AppShellOutletContext>(() => {
+    const memberships = Array.isArray((meData as any)?.memberships) ? (meData as any).memberships : [];
+    const activeClubId =
+      String((meData as any)?.activeClubId || localStorage.getItem("activeClubId") || "").trim();
+    const activeMembership =
+      (meData as any)?.activeMembership ||
+      memberships.find((membership: any) => membership?.clubId === activeClubId) ||
+      memberships[0] ||
+      null;
+
+    const role = String(activeMembership?.primary || "MEMBER").toUpperCase() as PrimaryRole;
+    const subRoles = Array.isArray(activeMembership?.subRoles)
+      ? (activeMembership.subRoles as SubRole[])
+      : [];
+    const clubId = String(activeMembership?.clubId || activeClubId || "").trim();
+
+    return {
+      clubId,
+      role,
+      subRoles,
+      permissions: listRolePermissions(role, subRoles),
+    };
+  }, [meData]);
+
   useEffect(() => {
-    if (!topNav.some((item) => item.key === active)) {
-      setActive(topNav[0]?.key ?? "dashboard");
+    const next = resolveNavKeyFromPath(location.pathname, dashboardHome);
+    if (topNav.some((item) => item.key === next)) {
+      setActive(next);
+      return;
     }
-  }, [active, topNav]);
+    setActive(topNav[0]?.key ?? "dashboard");
+  }, [dashboardHome, location.pathname, topNav]);
 
   useEffect(() => {
     localStorage.setItem("activeDashboardRole", dashboardRole);
@@ -905,6 +1003,10 @@ export default function AppShell() {
     const normalized = String(nextRole || "").toUpperCase() as DashboardRoleKey;
     if (!switchableRoles.includes(normalized)) return;
     localStorage.setItem("activeDashboardRole", normalized);
+    if (normalized === "ADMIN") {
+      navigate("/dashboard/admin", { replace: true });
+      return;
+    }
     navigate(pathForDashboardRole(normalized as DashboardRole), { replace: true });
   };
 
@@ -1007,11 +1109,14 @@ export default function AppShell() {
                           return (
                             <button
                               key={item.key}
-                              onClick={() => setActive(item.key)}
+                              onClick={() => {
+                                setActive(item.key);
+                                navigate(topNavTargets[item.key]);
+                              }}
                               className="rounded-full px-3 py-2 text-xs font-semibold transition"
                               style={{
                                 background: on
-                                  ? "rgba(var(--primary), .55)"
+                                  ? "rgb(var(--primary))"
                                   : "transparent",
                                 color: on
                                   ? "rgb(var(--primary-2))"
@@ -1019,6 +1124,7 @@ export default function AppShell() {
                                 border: on
                                   ? `1px solid ${GLASS_BORDER_STRONG}`
                                   : "1px solid transparent",
+                                boxShadow: on ? "0 10px 24px rgba(var(--primary), .32)" : undefined,
                               }}
                             >
                               {item.label}
@@ -1127,24 +1233,26 @@ export default function AppShell() {
                   <div className="mb-4 flex justify-end gap-2 sm:hidden">
                     <button
                       onClick={() => navigate("/")}
-                      className="rounded-full px-4 py-2 text-xs font-semibold shadow-sm transition hover:bg-white/70"
+                      className="flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-semibold shadow-sm transition hover:bg-white/70"
                       style={{
                         background: "rgba(255,255,255,0.50)",
                         border: `1px solid ${GLASS_BORDER}`,
                       }}
                     >
+                      <Home size={13} />
                       Home
                     </button>
 
                     <button
                       onClick={requestLogout}
-                      className="rounded-full px-4 py-2 text-xs font-semibold shadow-sm transition hover:opacity-95"
+                      className="flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:opacity-95"
                       style={{
-                        background: "rgba(var(--primary), .65)",
-                        color: "rgb(var(--primary-2))",
-                        border: `1px solid ${GLASS_BORDER_STRONG}`,
+                        background: "linear-gradient(135deg, rgba(239,68,68,.96), rgba(185,28,28,.93))",
+                        border: "1px solid rgba(220, 38, 38, .42)",
+                        boxShadow: "0 10px 24px rgba(239,68,68,.30)",
                       }}
                     >
+                      <LogOut size={13} />
                       Logout
                     </button>
                   </div>
@@ -1159,7 +1267,7 @@ export default function AppShell() {
                     </div>
                   )}
 
-                  <Outlet />
+                  <Outlet context={outletContext} />
                 </main>
               </div>
             </div>

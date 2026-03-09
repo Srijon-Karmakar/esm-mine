@@ -38,6 +38,10 @@ module.exports = {
   content: ["./src/**/*.{js,jsx,ts,tsx}"],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ["Poppins", '"Segoe UI"', "system-ui", "sans-serif"],
+        display: ["Poppins", '"Segoe UI"', "system-ui", "sans-serif"],
+      },
       colors: {
         background: "var(--bg-color)",
         surface: "var(--surface-color)",

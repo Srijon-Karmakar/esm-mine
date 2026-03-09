@@ -302,6 +302,14 @@ export default function App() {
           />
 
           <Route
+            path="members"
+            element={
+              <DashboardPermissionRoute permission="members.read">
+                <AdminMembers />
+              </DashboardPermissionRoute>
+            }
+          />
+          <Route
             path="training"
             element={
               <DashboardPermissionRoute permission="operations.read">

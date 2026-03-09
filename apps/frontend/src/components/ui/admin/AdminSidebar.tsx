@@ -1,6 +1,19 @@
-import { useLayoutEffect, useMemo, useRef, useState } from "react";
+import { type ReactNode, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import gsap from "gsap";
+import {
+    Activity,
+    BellRing,
+    ChartNoAxesCombined,
+    Home,
+    Layers3,
+    LogOut,
+    MessageSquare,
+    Settings,
+    ShieldCheck,
+    Sparkles,
+    Users2,
+} from "lucide-react";
 import type { SubRole } from "../../../api/admin.api";
 import { clearAuth } from "../../../utils/authStorage";
 import ConfirmModal from "../ConfirmModal";
@@ -26,6 +39,7 @@ function initials(name: string) {
 }
 
 const cardBorder = "rgba(var(--primary-2), .14)";
+const logoutBorder = "rgba(220, 38, 38, .42)";
 
 const adminNav = [
     { label: "Overview", to: "/admin" },
@@ -33,9 +47,23 @@ const adminNav = [
     { label: "Squads", to: "/admin/squads" },
     { label: "Matches", to: "/admin/matches" },
     { label: "Operations", to: "/admin/operations" },
+    { label: "Messages", to: "/dashboard/messages" },
     { label: "Analytics", to: "/admin/analytics" },
     { label: "Settings", to: "/admin/settings" },
 ];
+
+function navGlyph(label: string, to: string): ReactNode {
+    const key = `${label}:${to}`.toLowerCase();
+    if (key.includes("overview") || to === "/admin") return <ShieldCheck size={14} />;
+    if (key.includes("member")) return <Users2 size={14} />;
+    if (key.includes("squad")) return <Layers3 size={14} />;
+    if (key.includes("match")) return <Activity size={14} />;
+    if (key.includes("operation")) return <Sparkles size={14} />;
+    if (key.includes("message")) return <MessageSquare size={14} />;
+    if (key.includes("analytic")) return <ChartNoAxesCombined size={14} />;
+    if (key.includes("setting")) return <Settings size={14} />;
+    return <Sparkles size={14} />;
+}
 
 export default function AdminSidebar({
     open,
@@ -158,30 +186,67 @@ export default function AdminSidebar({
             to={to}
             className={({ isActive }) =>
                 cx(
-                    "group relative flex items-center justify-between rounded-xl border px-3 py-3 text-sm",
-                    "bg-white/55 backdrop-blur-md transition",
-                    "hover:bg-white/70",
+                    "group relative flex items-center justify-between overflow-hidden rounded-xl border px-3 py-3 text-sm",
+                    "backdrop-blur-md transition-all duration-200",
+                    "hover:bg-white/70 hover:-translate-y-[1px]",
                     isActive && "font-extrabold"
                 )
             }
             style={({ isActive }) => ({
-                borderColor: cardBorder,
-                background: isActive ? "rgba(var(--primary), .16)" : "rgba(255,255,255,0.55)",
+                borderColor: isActive ? "rgba(var(--primary), .72)" : cardBorder,
+                background: isActive
+                    ? "linear-gradient(135deg, rgba(var(--primary), 1), rgba(var(--primary), .82))"
+                    : "rgba(255,255,255,0.55)",
+                boxShadow: isActive ? "0 14px 30px rgba(var(--primary), .28)" : undefined,
             })}
         >
             {({ isActive }) => (
                 <>
                     <span
                         className={cx(
-                            "absolute left-0 top-1/2 -translate-y-1/2 rounded-full transition-all",
-                            isActive ? "h-8 w-1" : "h-0 w-1"
+                            "absolute left-2 top-1/2 -translate-y-1/2 rounded-full transition-all",
+                            isActive ? "h-7 w-1" : "h-0 w-1"
                         )}
-                        style={{ background: "rgb(var(--primary))" }}
+                        style={{
+                            background: isActive ? "rgb(var(--primary-2))" : "rgb(var(--primary))",
+                        }}
                     />
-                    <span className="relative">{label}</span>
-                    <span className="relative text-xs text-[rgb(var(--muted))] transition group-hover:translate-x-[1px]">
-                        â†’
+
+                    <div className="relative flex items-center gap-3">
+                        <span
+                            className="grid h-9 w-9 place-items-center rounded-lg border transition"
+                            style={{
+                                borderColor: isActive ? "rgba(var(--primary-2), .35)" : cardBorder,
+                                background: isActive ? "rgba(255,255,255,.18)" : "rgba(255,255,255,.64)",
+                                color: isActive ? "rgb(var(--primary-2))" : "rgb(var(--text))",
+                                boxShadow: isActive ? "0 10px 26px rgba(20,24,32,0.22)" : undefined,
+                            }}
+                        >
+                            {navGlyph(label, to)}
+                        </span>
+
+                        <span
+                            className="relative"
+                            style={{ color: isActive ? "rgb(var(--primary-2))" : "rgb(var(--text))" }}
+                        >
+                            {label}
+                        </span>
+                    </div>
+
+                    <span
+                        className="relative text-xs transition group-hover:translate-x-[1px]"
+                        style={{ color: isActive ? "rgba(var(--primary-2), .86)" : "rgb(var(--muted))" }}
+                    >
+                        {"->"}
                     </span>
+
+                    {isActive ? (
+                        <Sparkles
+                            size={12}
+                            className="pointer-events-none absolute right-8 top-1/2 -translate-y-1/2 opacity-85"
+                            color="rgb(var(--primary-2))"
+                        />
+                    ) : null}
                 </>
             )}
         </NavLink>
@@ -189,7 +254,10 @@ export default function AdminSidebar({
 
     const ProfileBlock = () => (
         <div className="mb-4">
-            <p className="text-xs text-[rgb(var(--muted))]">Club Admin</p>
+            <p className="flex items-center gap-1.5 text-xs text-[rgb(var(--muted))]">
+                <BellRing size={12} />
+                Club Admin
+            </p>
 
             <div className="mt-2 flex items-center gap-3">
                 <div
@@ -237,6 +305,30 @@ export default function AdminSidebar({
                 </span>
             </div>
 
+            <div className="mt-3 grid grid-cols-3 gap-2">
+                <div
+                    className="flex items-center justify-center gap-1 rounded-lg border bg-white/55 px-2 py-1 text-[10px] font-semibold"
+                    style={{ borderColor: cardBorder }}
+                >
+                    <Sparkles size={11} />
+                    Live
+                </div>
+                <div
+                    className="flex items-center justify-center gap-1 rounded-lg border bg-white/55 px-2 py-1 text-[10px] font-semibold"
+                    style={{ borderColor: cardBorder }}
+                >
+                    <Activity size={11} />
+                    Ops
+                </div>
+                <div
+                    className="flex items-center justify-center gap-1 rounded-lg border bg-white/55 px-2 py-1 text-[10px] font-semibold"
+                    style={{ borderColor: cardBorder }}
+                >
+                    <ChartNoAxesCombined size={11} />
+                    Trends
+                </div>
+            </div>
+
             <div className="mt-3">
                 <select
                     value={clubId}
@@ -260,17 +352,23 @@ export default function AdminSidebar({
         <div className="mt-auto grid gap-2">
             <button
                 onClick={() => navigate("/")}
-                className="w-full rounded-xl border bg-white/55 px-3 py-2 text-sm font-semibold backdrop-blur-md transition hover:bg-white/70"
+                className="flex w-full items-center justify-center gap-2 rounded-xl border bg-white/55 px-3 py-2 text-sm font-semibold backdrop-blur-md transition hover:bg-white/70"
                 style={{ borderColor: cardBorder }}
             >
+                <Home size={14} />
                 Home
             </button>
 
             <button
                 onClick={handleLogout}
-                className="w-full rounded-xl px-3 py-2 text-sm font-extrabold transition hover:opacity-95"
-                style={{ background: "rgb(var(--primary))", color: "rgb(var(--primary-2))" }}
+                className="flex w-full items-center justify-center gap-2 rounded-xl border px-3 py-2 text-sm font-extrabold text-white transition hover:opacity-95"
+                style={{
+                    background: "linear-gradient(135deg, rgba(239,68,68,.96), rgba(185,28,28,.93))",
+                    borderColor: logoutBorder,
+                    boxShadow: "0 14px 30px rgba(239,68,68,.30)",
+                }}
             >
+                <LogOut size={14} />
                 Logout
             </button>
         </div>
@@ -280,7 +378,7 @@ export default function AdminSidebar({
         <>
             <aside
                 className={cx(
-                    "hidden md:flex flex-col shrink-0",
+                    "relative hidden overflow-hidden md:flex flex-col shrink-0",
                     "w-[240px] min-w-[240px] max-w-[240px]",
                     "rounded-2xl border bg-white/55 p-4",
                     "backdrop-blur-xl",
@@ -288,6 +386,11 @@ export default function AdminSidebar({
                 )}
                 style={{ borderColor: cardBorder }}
             >
+                <div className="pointer-events-none absolute inset-0 -z-10">
+                    <div className="absolute -right-10 -top-12 h-28 w-28 rounded-full bg-[rgba(var(--primary),.22)] blur-2xl" />
+                    <div className="absolute -left-10 bottom-8 h-24 w-24 rounded-full bg-[rgba(var(--primary),.14)] blur-2xl" />
+                </div>
+
                 <ProfileBlock />
 
                 <nav className="mb-4 flex flex-col gap-2">
@@ -308,11 +411,16 @@ export default function AdminSidebar({
             <aside
                 ref={mobileRef}
                 className={cx(
-                    "fixed left-0 top-0 z-[90] h-full w-[300px] border-r bg-white/92 p-4 backdrop-blur-xl md:hidden",
+                    "fixed left-0 top-0 z-[90] h-full w-[300px] overflow-hidden border-r bg-white/92 p-4 backdrop-blur-xl md:hidden",
                     open ? "block" : "hidden"
                 )}
                 style={{ borderColor: cardBorder }}
             >
+                <div className="pointer-events-none absolute inset-0 -z-10">
+                    <div className="absolute -right-12 -top-14 h-32 w-32 rounded-full bg-[rgba(var(--primary),.20)] blur-2xl" />
+                    <div className="absolute -left-12 bottom-14 h-28 w-28 rounded-full bg-[rgba(var(--primary),.16)] blur-2xl" />
+                </div>
+
                 <div className="flex h-full flex-col">
                     <div className="mb-3 flex items-center justify-between">
                         <p className="text-sm font-extrabold">Admin Menu</p>

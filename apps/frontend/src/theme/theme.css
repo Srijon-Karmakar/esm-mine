@@ -1,4 +1,6 @@
 :root {
+  --font-sans: "Poppins", "Segoe UI", system-ui, sans-serif;
+
   --bg: 246 247 252;
   --surface: 255 255 255;
   --surface-2: 250 250 252;
@@ -30,6 +32,8 @@
 }
 
 :root {
+  --font-sans: "Poppins", "Segoe UI", system-ui, sans-serif;
+
   --bg: 245 246 250;           /* soft grey like reference */
   --surface: 252 252 252;      /* canvas */
   --text: 16 20 28;

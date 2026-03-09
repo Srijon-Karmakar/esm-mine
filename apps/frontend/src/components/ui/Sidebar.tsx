@@ -2,6 +2,15 @@
 import React, { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import gsap from "gsap";
+import {
+  BellRing,
+  CalendarClock,
+  Home,
+  LogOut,
+  Sparkles,
+  Target,
+  Trophy,
+} from "lucide-react";
 import { clearAuth } from "../../utils/authStorage";
 import { useDashboardRecent } from "../../hooks/useDashboard";
 import ConfirmModal from "./ConfirmModal";
@@ -146,11 +155,8 @@ export default function Sidebar({
     );
   }, [recentQuery.data]);
 
-//   const cardBorder = "rgba(var(--primary-2), .14)";
-//   const cardBorderStrong = "rgba(var(--primary-2), .22)";
-
-const cardBorder = "rgba(var(--primary-2), .14)";
-  const cardBorderStrong = "rgba(var(--primary-2), .22)";
+  const cardBorder = "rgba(var(--primary-2), .14)";
+  const logoutBorder = "rgba(220, 38, 38, .42)";
 
   const copyId = async () => {
     try {
@@ -180,44 +186,29 @@ const cardBorder = "rgba(var(--primary-2), .14)";
       to={it.to}
       className={({ isActive }) =>
         cx(
-          "group relative flex items-center justify-between rounded-xl border px-3 py-3 text-sm",
-          "backdrop-blur-md transition",
-          "hover:bg-white/70",
+          "group relative flex items-center justify-between overflow-hidden rounded-xl border px-3 py-3 text-sm",
+          "backdrop-blur-md transition-all duration-200",
+          "hover:bg-white/70 hover:-translate-y-[1px]",
           isActive ? "font-semibold" : "font-medium"
         )
       }
-      style={{ borderColor: cardBorder }}
+      style={({ isActive }) => ({
+        borderColor: isActive ? "rgba(var(--primary), .72)" : cardBorder,
+        background: isActive
+          ? "linear-gradient(135deg, rgba(var(--primary), 1), rgba(var(--primary), .82))"
+          : "rgba(255,255,255,0.55)",
+        boxShadow: isActive ? "0 14px 30px rgba(var(--primary), .28)" : undefined,
+      })}
     >
       {({ isActive }) => (
         <>
-          {/* Active indicator bar */}
           <span
             className={cx(
-              "absolute left-0 top-1/2 -translate-y-1/2 rounded-full transition-all",
-              isActive ? "h-8 w-1" : "h-0 w-1"
-            )}
-            style={{ background: "rgb(var(--primary))" }}
-          />
-
-          {/* Active background = theme color */}
-          <span
-            className={cx(
-              "pointer-events-none absolute inset-0 rounded-xl opacity-0 transition-opacity"
+              "absolute left-2 top-1/2 -translate-y-1/2 rounded-full transition-all",
+              isActive ? "h-7 w-1" : "h-0 w-1"
             )}
             style={{
-              opacity: isActive ? 1 : 0,
-              background:
-                "linear-gradient(90deg, rgba(var(--primary), .28), rgba(var(--primary), .10) 50%, rgba(255,255,255,0) 90%)",
-            }}
-          />
-
-          {/* Base card bg */}
-          <span
-            className="pointer-events-none absolute inset-0 rounded-xl"
-            style={{
-              background: isActive ? "rgba(255,255,255,0.58)" : "rgba(255,255,255,0.55)",
-              border: isActive ? `1px solid ${cardBorderStrong}` : "1px solid transparent",
-              opacity: 1,
+              background: isActive ? "rgb(var(--primary-2))" : "rgb(var(--primary))",
             }}
           />
 
@@ -225,30 +216,43 @@ const cardBorder = "rgba(var(--primary-2), .14)";
             <span
               className="grid h-9 w-9 place-items-center rounded-lg border bg-white/60 transition"
               style={{
-                borderColor: isActive ? cardBorderStrong : cardBorder,
-                boxShadow: isActive ? "0 10px 26px rgba(20,24,32,0.10)" : undefined,
+                borderColor: isActive ? "rgba(var(--primary-2), .35)" : cardBorder,
+                background: isActive ? "rgba(255,255,255,.18)" : "rgba(255,255,255,.64)",
+                color: isActive ? "rgb(var(--primary-2))" : "rgb(var(--text))",
+                boxShadow: isActive ? "0 10px 26px rgba(20,24,32,0.22)" : undefined,
               }}
             >
               {it.icon ?? (
-                <span className="text-xs" style={{ color: "rgb(var(--muted))" }}>
-                  |
-                </span>
+                <Target size={14} />
               )}
             </span>
 
             <span
               className="relative"
               style={{
-                color: isActive ? "rgb(var(--text))" : "rgb(var(--text))",
+                color: isActive ? "rgb(var(--primary-2))" : "rgb(var(--text))",
               }}
             >
               {it.label}
             </span>
           </div>
 
-          <span className="relative text-xs text-[rgb(var(--muted))] transition group-hover:translate-x-[1px]">
+          <span
+            className="relative text-xs transition group-hover:translate-x-[1px]"
+            style={{
+              color: isActive ? "rgba(var(--primary-2), .86)" : "rgb(var(--muted))",
+            }}
+          >
             {"->"}
           </span>
+
+          {isActive ? (
+            <Sparkles
+              size={12}
+              className="pointer-events-none absolute right-8 top-1/2 -translate-y-1/2 opacity-85"
+              color="rgb(var(--primary-2))"
+            />
+          ) : null}
         </>
       )}
     </NavLink>
@@ -256,7 +260,10 @@ const cardBorder = "rgba(var(--primary-2), .14)";
 
   const ProfileBlock = () => (
     <div className="mb-4">
-      <p className="text-xs text-[rgb(var(--muted))]">EsportM</p>
+      <p className="flex items-center gap-1.5 text-xs text-[rgb(var(--muted))]">
+        <BellRing size={12} />
+        EsportM
+      </p>
 
       <div className="mt-2 flex items-center gap-3">
         <div
@@ -337,12 +344,39 @@ const cardBorder = "rgba(var(--primary-2), .14)";
           Season: 24/25
         </span>
       </div>
+
+      <div className="mt-3 grid grid-cols-3 gap-2">
+        <div
+          className="flex items-center justify-center gap-1 rounded-lg border bg-white/55 px-2 py-1 text-[10px] font-semibold"
+          style={{ borderColor: cardBorder }}
+        >
+          <Sparkles size={11} />
+          Live
+        </div>
+        <div
+          className="flex items-center justify-center gap-1 rounded-lg border bg-white/55 px-2 py-1 text-[10px] font-semibold"
+          style={{ borderColor: cardBorder }}
+        >
+          <Target size={11} />
+          Focus
+        </div>
+        <div
+          className="flex items-center justify-center gap-1 rounded-lg border bg-white/55 px-2 py-1 text-[10px] font-semibold"
+          style={{ borderColor: cardBorder }}
+        >
+          <Trophy size={11} />
+          Squad
+        </div>
+      </div>
     </div>
   );
 
   const NextMatchBlock = () => (
     <div className="mb-4">
-      <p className="text-xs text-[rgb(var(--muted))]">Next Match</p>
+      <p className="flex items-center gap-1.5 text-xs text-[rgb(var(--muted))]">
+        <CalendarClock size={12} />
+        Next Match
+      </p>
       <div className="mt-2 h-2 w-full rounded-full bg-black/5">
         <div
           className="h-2 rounded-full"
@@ -375,22 +409,25 @@ const cardBorder = "rgba(var(--primary-2), .14)";
     <div className="mt-auto grid gap-2">
       <button
         onClick={() => navigate("/")}
-        className="w-full rounded-xl border bg-white/55 px-3 py-2 text-sm font-semibold backdrop-blur-md transition hover:bg-white/70"
+        className="flex w-full items-center justify-center gap-2 rounded-xl border bg-white/55 px-3 py-2 text-sm font-semibold backdrop-blur-md transition hover:bg-white/70"
         style={{ borderColor: cardBorder }}
         aria-label="Go home"
       >
+        <Home size={14} />
         Home
       </button>
 
       <button
         onClick={handleLogout}
-        className="w-full rounded-xl px-3 py-2 text-sm font-semibold transition hover:opacity-95"
+        className="flex w-full items-center justify-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold text-white transition hover:opacity-95"
         style={{
-          background: "rgb(var(--primary))",
-          color: "rgb(var(--primary-2))",
+          background: "linear-gradient(135deg, rgba(239,68,68,.96), rgba(185,28,28,.93))",
+          borderColor: logoutBorder,
+          boxShadow: "0 14px 30px rgba(239,68,68,.30)",
         }}
         aria-label="Logout"
       >
+        <LogOut size={14} />
         Logout
       </button>
     </div>
@@ -401,7 +438,7 @@ const cardBorder = "rgba(var(--primary-2), .14)";
       {/* ===================== DESKTOP (inside canvas) ===================== */}
       <aside
         className={cx(
-          "hidden md:flex flex-col shrink-0",
+          "relative hidden overflow-hidden md:flex flex-col shrink-0",
           "w-[220px] min-w-[220px] max-w-[220px]",
           "max-h-[calc(100vh-11.5rem)]",
           "rounded-2xl border bg-white/55 p-4",
@@ -412,6 +449,11 @@ const cardBorder = "rgba(var(--primary-2), .14)";
         style={{ borderColor: cardBorder }}
         aria-label="Sidebar"
       >
+        <div className="pointer-events-none absolute inset-0 -z-10">
+          <div className="absolute -right-10 -top-12 h-28 w-28 rounded-full bg-[rgba(var(--primary),.22)] blur-2xl" />
+          <div className="absolute -left-10 bottom-8 h-24 w-24 rounded-full bg-[rgba(var(--primary),.14)] blur-2xl" />
+        </div>
+
         <ProfileBlock />
         <NextMatchBlock />
 
@@ -437,11 +479,16 @@ const cardBorder = "rgba(var(--primary-2), .14)";
       <aside
         ref={mobileRef}
         className={cx(
-          "fixed left-0 top-0 z-[90] h-full w-[280px] border-r bg-white/92 p-4 backdrop-blur-xl md:hidden",
+          "fixed left-0 top-0 z-[90] h-full w-[280px] overflow-hidden border-r bg-white/92 p-4 backdrop-blur-xl md:hidden",
           open ? "block" : "hidden"
         )}
         style={{ borderColor: cardBorder }}
       >
+        <div className="pointer-events-none absolute inset-0 -z-10">
+          <div className="absolute -right-12 -top-14 h-32 w-32 rounded-full bg-[rgba(var(--primary),.20)] blur-2xl" />
+          <div className="absolute -left-12 bottom-14 h-28 w-28 rounded-full bg-[rgba(var(--primary),.16)] blur-2xl" />
+        </div>
+
         <div className="flex h-full flex-col">
           <div className="mb-4 flex items-center justify-between">
             <div className="min-w-0">

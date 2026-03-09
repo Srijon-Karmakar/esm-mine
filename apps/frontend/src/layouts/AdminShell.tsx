@@ -21,7 +21,15 @@ import {
   type RolePermission,
 } from "../utils/rolePolicy";
 
-type NavKey = "overview" | "members" | "squads" | "matches" | "operations" | "analytics" | "settings";
+type NavKey =
+  | "overview"
+  | "members"
+  | "squads"
+  | "matches"
+  | "operations"
+  | "messages"
+  | "analytics"
+  | "settings";
 type ClubItem = { id: string; name: string; slug: string };
 type ScopedMembership = {
   clubId: string;
@@ -35,6 +43,7 @@ const adminTopNav: { key: NavKey; label: string; to: string; permission: RolePer
   { key: "squads", label: "Squads", to: "/admin/squads", permission: "squads.read" },
   { key: "matches", label: "Matches", to: "/admin/matches", permission: "matches.read" },
   { key: "operations", label: "Operations", to: "/admin/operations", permission: "operations.read" },
+  { key: "messages", label: "Messages", to: "/dashboard/messages", permission: "membership.self.read" },
   { key: "analytics", label: "Analytics", to: "/admin/analytics", permission: "stats.read" },
   { key: "settings", label: "Settings", to: "/admin/settings", permission: "membership.self.read" },
 ];
@@ -401,11 +410,12 @@ export default function AdminShell() {
                               onClick={() => navigate(item.to)}
                               className="rounded-full px-3 py-2 text-xs font-semibold transition"
                               style={{
-                                background: on ? "rgba(var(--primary), .70)" : "transparent",
+                                background: on ? "rgb(var(--primary))" : "transparent",
                                 color: on ? "rgb(var(--primary-2))" : "rgb(var(--text))",
                                 border: on
                                   ? `1px solid ${GLASS_BORDER_STRONG}`
                                   : "1px solid transparent",
+                                boxShadow: on ? "0 10px 24px rgba(var(--primary), .32)" : undefined,
                               }}
                             >
                               {item.label}

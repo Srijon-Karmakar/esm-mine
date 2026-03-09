@@ -64,6 +64,7 @@ export const PRIMARY_ROLE_PERMISSIONS: Record<PrimaryRole, readonly RolePermissi
     "players.read",
     "matches.read",
     "injuries.read",
+    "operations.read",
     "seasons.read",
     "opponents.read",
     "stats.read",

@@ -1,7 +1,12 @@
 import { http } from "./http";
 
 export const authApi = {
-  me: () => http.get("/auth/me").then(r => r.data),
+  me: (clubId?: string) =>
+    http
+      .get("/auth/me", {
+        params: clubId ? { clubId } : undefined,
+      })
+      .then((r) => r.data),
 };
 
 export const dashboardApi = {
