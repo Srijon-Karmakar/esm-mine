@@ -11,6 +11,7 @@ import {
   AssignSignupDto,
   CreateClubDto,
   InviteMemberDto,
+  PendingSignupsQueryDto,
   UpdateMemberRoleDto,
 } from './dto';
 import { InvitationsService } from '../invitations/invitations.service';
@@ -290,27 +291,25 @@ export class ClubsService {
     };
   }
 
-  async listPendingSignups(clubId: string) {
-    // Only truly unassigned users should enter club signup queues.
-    const users = await this.prisma.user.findMany({
-      where: {
-        memberships: {
-          none: {},
-        },
-      },
-      select: {
-        id: true,
-        email: true,
-        fullName: true,
-        createdAt: true,
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+  async listPendingSignups(clubId: string, query?: PendingSignupsQueryDto) {
+    const scope = String(query?.scope || 'CLUB').toUpperCase() === 'GLOBAL' ? 'GLOBAL' : 'CLUB';
+    const page = Math.max(1, Number(query?.page || 1));
+    const pageSize = Math.max(1, Math.min(100, Number(query?.pageSize || 25)));
+    const skip = (page - 1) * pageSize;
+    const q = String(query?.q || '').trim();
+    const now = new Date();
+
+    if (scope === 'GLOBAL' && q.length < 2) {
+      throw new BadRequestException(
+        'Global signup lookup requires a search query with at least 2 characters',
+      );
+    }
 
     const activeInvites = await (this.prisma as any).invitation.findMany({
       where: {
         usedAt: null,
-        expiresAt: { gt: new Date() },
+        expiresAt: { gt: now },
+        ...(scope === 'CLUB' ? { clubId } : {}),
       },
       orderBy: { createdAt: 'desc' },
       select: {
@@ -332,30 +331,98 @@ export class ClubsService {
       if (invite.userId && !inviteByUserId.has(invite.userId)) {
         inviteByUserId.set(invite.userId, invite);
       }
-      const key = invite.email.toLowerCase();
-      if (!inviteByEmail.has(key)) inviteByEmail.set(key, invite);
+      const key = String(invite.email || '').toLowerCase().trim();
+      if (key && !inviteByEmail.has(key)) inviteByEmail.set(key, invite);
     }
 
-    return users
-      .map((u) => {
-      const pending =
-        inviteByUserId.get(u.id) || inviteByEmail.get(u.email.toLowerCase()) || null;
+    const pendingUserIds = Array.from(inviteByUserId.keys());
+    const pendingEmails = Array.from(inviteByEmail.keys());
+
+    if (scope === 'CLUB' && !pendingUserIds.length && !pendingEmails.length) {
+      return {
+        users: [],
+        pagination: {
+          page,
+          pageSize,
+          total: 0,
+          totalPages: 0,
+          hasNext: false,
+          scope,
+          q,
+        },
+      };
+    }
+
+    const userWhere: any = {
+      memberships: {
+        none: {},
+      },
+    };
+
+    if (scope === 'CLUB') {
+      userWhere.OR = [];
+      if (pendingUserIds.length) {
+        userWhere.OR.push({ id: { in: pendingUserIds } });
+      }
+      if (pendingEmails.length) {
+        userWhere.OR.push({ email: { in: pendingEmails } });
+      }
+    }
+
+    if (q) {
+      userWhere.AND = [
+        {
+          OR: [
+            { id: { contains: q } },
+            { email: { contains: q, mode: 'insensitive' } },
+            { fullName: { contains: q, mode: 'insensitive' } },
+          ],
+        },
+      ];
+    }
+
+    const total = await this.prisma.user.count({ where: userWhere });
+    const users = await this.prisma.user.findMany({
+      where: userWhere,
+      select: {
+        id: true,
+        email: true,
+        fullName: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take: pageSize,
+    });
+
+    return {
+      users: users.map((u) => {
+        const pending =
+          inviteByUserId.get(u.id) || inviteByEmail.get(u.email.toLowerCase()) || null;
         return {
           ...u,
           pendingAssignment: pending
             ? {
                 invitationId: pending.id,
+                clubId: pending.clubId,
                 primary: pending.primary,
                 subRoles: pending.subRoles,
                 createdAt: pending.createdAt,
                 expiresAt: pending.expiresAt,
               }
             : null,
-          _pendingClubId: pending?.clubId || null,
         };
-      })
-      .filter((u: any) => !u._pendingClubId || u._pendingClubId === clubId)
-      .map(({ _pendingClubId, ...u }: any) => u);
+      }),
+      pagination: {
+        page,
+        pageSize,
+        total,
+        totalPages: total ? Math.ceil(total / pageSize) : 0,
+        hasNext: page * pageSize < total,
+        scope,
+        q,
+      },
+    };
   }
 
   async listMembers(clubId: string) {

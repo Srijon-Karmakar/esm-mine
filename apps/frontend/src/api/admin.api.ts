@@ -247,11 +247,34 @@ export type PendingSignup = {
   createdAt: string;
   pendingAssignment?: {
     invitationId: string;
+    clubId?: string;
     primary: PrimaryRole;
     subRoles: SubRole[];
     createdAt: string;
     expiresAt: string;
   } | null;
+};
+
+export type PendingSignupsScope = "CLUB" | "GLOBAL";
+
+export type PendingSignupsQuery = {
+  page?: number;
+  pageSize?: number;
+  q?: string;
+  scope?: PendingSignupsScope;
+};
+
+export type PendingSignupsPage = {
+  users: PendingSignup[];
+  pagination: {
+    page: number;
+    pageSize: number;
+    total: number;
+    totalPages: number;
+    hasNext: boolean;
+    scope: PendingSignupsScope;
+    q?: string;
+  };
 };
 
 export type MyPendingAssignment = { 
@@ -438,9 +461,25 @@ export async function acceptInvitation(payload: {
   return data;
 }
 
-export async function getPendingSignups(clubId: string): Promise<PendingSignup[]> {
-  const { data } = await http.get(`/clubs/${clubId}/signups/pending`);
-  return data?.users ?? [];
+export async function getPendingSignups(
+  clubId: string,
+  query?: PendingSignupsQuery
+): Promise<PendingSignupsPage> {
+  const { data } = await http.get(`/clubs/${clubId}/signups/pending`, {
+    params: query,
+  });
+  return {
+    users: data?.users ?? [],
+    pagination: {
+      page: Number(data?.pagination?.page || 1),
+      pageSize: Number(data?.pagination?.pageSize || query?.pageSize || 25),
+      total: Number(data?.pagination?.total || 0),
+      totalPages: Number(data?.pagination?.totalPages || 0),
+      hasNext: Boolean(data?.pagination?.hasNext),
+      scope: (data?.pagination?.scope || query?.scope || "CLUB") as PendingSignupsScope,
+      q: String(data?.pagination?.q || query?.q || ""),
+    },
+  };
 }
 
 export async function assignSignupToClub(

@@ -126,6 +126,14 @@ export default function ClubAdminDashboard() {
             <DotTag>ADMIN</DotTag>
             <button
               type="button"
+              onClick={() => navigate("/admin/matches")}
+              className="rounded-full border bg-white/80 px-3 py-1 text-xs font-semibold transition hover:bg-white"
+              style={{ borderColor: adminCardBorder }}
+            >
+              Create Match
+            </button>
+            <button
+              type="button"
               onClick={() => navigate("/dashboard/messages")}
               className="rounded-full border bg-white/80 px-3 py-1 text-xs font-semibold transition hover:bg-white"
               style={{ borderColor: adminCardBorder }}

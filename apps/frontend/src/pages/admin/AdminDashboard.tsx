@@ -98,6 +98,7 @@ export default function AdminDashboard() {
   const [matches, setMatches] = useState<MatchItem[]>([]);
   const [leaderboard, setLeaderboard] = useState<LeaderboardRow[]>([]);
   const [pendingSignups, setPendingSignups] = useState<Array<{ id: string; fullName?: string | null; email: string; pendingAssignment?: { primary: PrimaryRole; expiresAt: string } | null }>>([]);
+  const [pendingSignupsTotal, setPendingSignupsTotal] = useState(0);
   const [recent, setRecent] = useState<RecentPayload>({});
 
   const [createName, setCreateName] = useState("");
@@ -120,7 +121,35 @@ export default function AdminDashboard() {
       setErr(null);
 
       try {
-        const pendingPromise = canReadSignups ? getPendingSignups(clubId).catch(() => []) : Promise.resolve([]);
+        const pendingPromise = canReadSignups
+          ? getPendingSignups(clubId, {
+              scope: "CLUB",
+              page: 1,
+              pageSize: 5,
+            }).catch(() => ({
+                users: [],
+                pagination: {
+                  page: 1,
+                  pageSize: 5,
+                  total: 0,
+                  totalPages: 0,
+                  hasNext: false,
+                  scope: "CLUB" as const,
+                  q: "",
+                },
+              }))
+          : Promise.resolve({
+              users: [],
+              pagination: {
+                page: 1,
+                pageSize: 5,
+                total: 0,
+                totalPages: 0,
+                hasNext: false,
+                scope: "CLUB" as const,
+                q: "",
+              },
+            });
         const [clubPlayers, clubMembers, clubSquads, clubMatches, board, recents] = await Promise.all([
           getClubPlayers(clubId),
           getClubMembers(clubId),
@@ -139,7 +168,8 @@ export default function AdminDashboard() {
         setMatches(clubMatches || []);
         setLeaderboard(board || []);
         setRecent((recents || {}) as RecentPayload);
-        setPendingSignups(signups || []);
+        setPendingSignups(signups?.users || []);
+        setPendingSignupsTotal(Number(signups?.pagination?.total || 0));
       } catch (e: unknown) {
         if (!alive) return;
         setErr(messageOf(e, "Failed to load admin dashboard."));
@@ -186,7 +216,7 @@ export default function AdminDashboard() {
         (squads.filter((squad) => (squad?._count?.members || 0) > 0).length / squads.length) * 100
       )
     : 0;
-  const queueLoad = Math.min(100, pendingSignups.length * 10);
+  const queueLoad = Math.min(100, pendingSignupsTotal * 10);
 
   const topPerformer = leaderboard[0];
   const topValue = topPerformer ? metricValue(topPerformer, metric) : 0;
@@ -247,8 +277,8 @@ export default function AdminDashboard() {
         right={
           <div className="flex flex-wrap items-center gap-2">
             <DotTag>{role}</DotTag>
-            <DotTag tone={pendingSignups.length > 0 ? "warn" : "ok"}>
-              Queue {pendingSignups.length}
+            <DotTag tone={pendingSignupsTotal > 0 ? "warn" : "ok"}>
+              Queue {pendingSignupsTotal}
             </DotTag>
             <DotTag tone={statusCount.live > 0 ? "warn" : "default"}>Live {statusCount.live}</DotTag>
           </div>
@@ -405,10 +435,10 @@ export default function AdminDashboard() {
 
         <Section
           title="Onboarding Queue"
-          subtitle="User-ID assignment pipeline."
+          subtitle="Invitation pipeline: admin invites, member accepts."
           className="xl:col-span-4"
           dark
-          right={<DotTag tone={pendingSignups.length > 0 ? "warn" : "ok"}>{pendingSignups.length}</DotTag>}
+          right={<DotTag tone={pendingSignupsTotal > 0 ? "warn" : "ok"}>{pendingSignupsTotal}</DotTag>}
         >
           {!pendingSignups.length ? (
             <p className="text-sm text-white/75">No pending signups right now.</p>
@@ -422,8 +452,8 @@ export default function AdminDashboard() {
                   <p className="truncate text-xs text-white/60">{signup.id}</p>
                   <p className="mt-1 text-xs text-white/70">
                     {signup.pendingAssignment
-                      ? `Assigned ${signup.pendingAssignment.primary} until ${formatDateTime(signup.pendingAssignment.expiresAt)}`
-                      : "Not assigned yet"}
+                      ? `Invitation pending: ${signup.pendingAssignment.primary} until ${formatDateTime(signup.pendingAssignment.expiresAt)}`
+                      : "No invitation yet"}
                   </p>
                 </div>
               ))}

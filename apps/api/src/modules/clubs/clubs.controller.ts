@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -15,6 +16,7 @@ import {
   AssignSignupDto,
   CreateClubDto,
   InviteMemberDto,
+  PendingSignupsQueryDto,
   UpdateClubThemeDto,
   UpdateMemberRoleDto,
 } from './dto';
@@ -88,9 +90,11 @@ export class ClubsController {
   @UseGuards(JwtAuthGuard, PermissionsGuard)
   @Permissions('members.assign.signup')
   @Get(':clubId/signups/pending')
-  async pendingSignups(@Param('clubId') clubId: string) {
-    const users = await this.clubs.listPendingSignups(clubId);
-    return { users };
+  async pendingSignups(
+    @Param('clubId') clubId: string,
+    @Query() query: PendingSignupsQueryDto,
+  ) {
+    return this.clubs.listPendingSignups(clubId, query);
   }
 
   // Management-system flow: assign role by userId (no email link sharing required).

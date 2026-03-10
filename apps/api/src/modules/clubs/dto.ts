@@ -2,12 +2,17 @@ import {
   IsArray,
   IsEmail,
   IsEnum,
+  IsIn,
+  IsInt,
   IsOptional,
   IsString,
+  Max,
   Matches,
+  Min,
   MinLength,
 } from 'class-validator';
 import { PrimaryRole, SubRole } from '@prisma/client';
+import { Type } from 'class-transformer';
 
 export class CreateClubDto {
   @IsString()
@@ -88,4 +93,28 @@ export class UpdateClubThemeDto {
     message: 'deep must be a 6-digit hex color (e.g., #141820)',
   })
   deep?: string;
+}
+
+export class PendingSignupsQueryDto {
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  page?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  pageSize?: number;
+
+  @IsOptional()
+  @IsString()
+  q?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsIn(['CLUB', 'GLOBAL'])
+  scope?: 'CLUB' | 'GLOBAL';
 }

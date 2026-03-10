@@ -1,5 +1,8 @@
 ﻿import { useMemo, useState } from "react";
 import { useDashboardRecent } from "../../../hooks/useDashboard";
+import { useMe } from "../../../hooks/useMe";
+import { createClubMatch } from "../../../api/admin.api";
+import { hasRolePermission } from "../../../utils/rolePolicy";
 import {
   DotTag,
   Hero,
@@ -24,6 +27,26 @@ type RecentData = {
   }>;
 };
 
+const PRIMARY_ROLES = ["ADMIN", "MANAGER", "PLAYER", "MEMBER"] as const;
+const SUB_ROLES = ["COACH", "PHYSIO", "AGENT", "NUTRITIONIST", "PITCH_MANAGER", "CAPTAIN"] as const;
+type PrimaryRole = (typeof PRIMARY_ROLES)[number];
+type SubRole = (typeof SUB_ROLES)[number];
+
+function normalizePrimaryRole(value: unknown): PrimaryRole {
+  const role = String(value || "").toUpperCase();
+  if (PRIMARY_ROLES.includes(role as PrimaryRole)) return role as PrimaryRole;
+  return "MEMBER";
+}
+
+function normalizeSubRoles(value: unknown): SubRole[] {
+  if (!Array.isArray(value)) return [];
+  const picked: SubRole[] = [];
+  for (const role of SUB_ROLES) {
+    if (value.includes(role)) picked.push(role);
+  }
+  return picked;
+}
+
 function statusTone(status?: string | null) {
   if (status === "LIVE") return "warn";
   if (status === "FINISHED") return "ok";
@@ -34,8 +57,33 @@ function statusTone(status?: string | null) {
 export default function MatchesPage() {
   const [filter, setFilter] = useState<Filter>("ALL");
   const [now] = useState(() => Date.now());
+  const [showCreate, setShowCreate] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [title, setTitle] = useState("");
+  const [opponent, setOpponent] = useState("");
+  const [venue, setVenue] = useState("");
+  const [kickoffAt, setKickoffAt] = useState(() => {
+    const nextDay = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    const pad = (value: number) => String(value).padStart(2, "0");
+    const year = nextDay.getFullYear();
+    const month = pad(nextDay.getMonth() + 1);
+    const day = pad(nextDay.getDate());
+    const hours = pad(nextDay.getHours());
+    const minutes = pad(nextDay.getMinutes());
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  });
+  const meQuery = useMe();
   const recentQuery = useDashboardRecent(40);
   const recent = (recentQuery.data || {}) as RecentData;
+  const meData = (meQuery.data || {}) as {
+    activeClubId?: string | null;
+    activeMembership?: { primary?: string; subRoles?: string[] } | null;
+  };
+  const primaryRole = normalizePrimaryRole(meData.activeMembership?.primary);
+  const subRoles = normalizeSubRoles(meData.activeMembership?.subRoles);
+  const canManage = hasRolePermission(primaryRole, subRoles, "matches.write");
+  const activeClubId = String(meData.activeClubId || localStorage.getItem("activeClubId") || "").trim();
 
   const matches = useMemo(() => {
     return [...(recent.matches || [])].sort(
@@ -63,6 +111,37 @@ export default function MatchesPage() {
     return matches.filter((match) => String(match.status || "").toUpperCase() === filter);
   }, [matches, filter]);
 
+  const onCreateMatch = async () => {
+    if (!canManage) return;
+    if (!activeClubId) {
+      setCreateError("No active club selected.");
+      return;
+    }
+    if (!title.trim() || !opponent.trim() || !kickoffAt) {
+      setCreateError("Title, opponent, and kickoff are required.");
+      return;
+    }
+    try {
+      setCreating(true);
+      setCreateError(null);
+      await createClubMatch(activeClubId, {
+        title: title.trim(),
+        opponent: opponent.trim(),
+        venue: venue.trim() || undefined,
+        kickoffAt: new Date(kickoffAt).toISOString(),
+      });
+      setShowCreate(false);
+      setTitle("");
+      setOpponent("");
+      setVenue("");
+      await recentQuery.refetch();
+    } catch (e: any) {
+      setCreateError(e?.response?.data?.message || e?.message || "Failed to create match.");
+    } finally {
+      setCreating(false);
+    }
+  };
+
   if (recentQuery.isLoading) {
     return (
       <PageWrap>
@@ -81,7 +160,24 @@ export default function MatchesPage() {
       <Hero
         title="Matches Hub"
         subtitle="Central fixture stream with live statuses and score updates."
-        right={<DotTag>MATCHES</DotTag>}
+        right={
+          <div className="flex items-center gap-2">
+            <DotTag>MATCHES</DotTag>
+            {canManage && (
+              <button
+                type="button"
+                onClick={() => {
+                  setCreateError(null);
+                  setShowCreate((prev) => !prev);
+                }}
+                className="rounded-full border bg-white/80 px-3 py-1 text-xs font-semibold transition hover:bg-white"
+                style={{ borderColor: adminCardBorder }}
+              >
+                Create Match
+              </button>
+            )}
+          </div>
+        }
       />
 
       {recentQuery.isError && (
@@ -101,6 +197,67 @@ export default function MatchesPage() {
         <Stat label="Finished" value={counters.finished} />
         <Stat label="Cancelled" value={counters.cancelled} />
       </div>
+
+      {canManage && showCreate && (
+        <Section title="Create Match" subtitle="Add a new fixture to this club schedule.">
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+            <input
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+              placeholder="Match title"
+              className="rounded-xl border bg-white/80 px-3 py-2 text-sm outline-none"
+              style={{ borderColor: adminCardBorder }}
+            />
+            <input
+              value={opponent}
+              onChange={(event) => setOpponent(event.target.value)}
+              placeholder="Opponent"
+              className="rounded-xl border bg-white/80 px-3 py-2 text-sm outline-none"
+              style={{ borderColor: adminCardBorder }}
+            />
+            <input
+              value={venue}
+              onChange={(event) => setVenue(event.target.value)}
+              placeholder="Venue (optional)"
+              className="rounded-xl border bg-white/80 px-3 py-2 text-sm outline-none"
+              style={{ borderColor: adminCardBorder }}
+            />
+            <input
+              type="datetime-local"
+              value={kickoffAt}
+              onChange={(event) => setKickoffAt(event.target.value)}
+              className="rounded-xl border bg-white/80 px-3 py-2 text-sm outline-none"
+              style={{ borderColor: adminCardBorder }}
+            />
+          </div>
+          {createError && (
+            <p className="mt-2 text-sm font-semibold text-rose-700">{createError}</p>
+          )}
+          <div className="mt-3 flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onCreateMatch}
+              disabled={creating}
+              className="rounded-xl px-3 py-2 text-sm font-extrabold transition disabled:opacity-60"
+              style={{
+                background: "rgb(var(--primary))",
+                color: "rgb(var(--primary-2))",
+                border: `1px solid ${adminCardBorder}`,
+              }}
+            >
+              {creating ? "Creating..." : "Create Match"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowCreate(false)}
+              className="rounded-xl border bg-white/80 px-3 py-2 text-sm font-semibold"
+              style={{ borderColor: adminCardBorder }}
+            >
+              Cancel
+            </button>
+          </div>
+        </Section>
+      )}
 
       <div className="grid gap-4 xl:grid-cols-12">
         <Section

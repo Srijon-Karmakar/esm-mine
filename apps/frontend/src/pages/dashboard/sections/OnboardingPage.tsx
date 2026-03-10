@@ -121,7 +121,7 @@ export default function OnboardingPage() {
       <div className="space-y-4">
         <Hero
           title="Account Onboarding"
-          subtitle="Accept your club assignment to unlock the full dashboard workspace."
+          subtitle="Accept your club invitation to unlock the full dashboard workspace."
           right={<DotTag>MEMBER</DotTag>}
         />
 
@@ -135,16 +135,16 @@ export default function OnboardingPage() {
         )}
 
         {!pending.length ? (
-          <Section title="Assignments" subtitle="Pending invitations from clubs.">
+          <Section title="Invitations" subtitle="Pending invitations from clubs.">
             <div
               className="rounded-2xl border p-4 text-sm text-[rgb(var(--muted))]"
               style={{ borderColor: cardBorder, background: cardBg, boxShadow: glassShadow }}
             >
-              No club assignment yet. Please wait for an admin to assign your role.
+              No invitation yet. Please wait for an admin to invite you.
             </div>
           </Section>
         ) : (
-          <Section title="Assignments" subtitle="Accept one invitation to activate your workspace.">
+          <Section title="Invitations" subtitle="Accept one invitation to activate your workspace.">
             <div className="grid gap-3">
               {pending.map((p) => (
                 <div
@@ -175,7 +175,7 @@ export default function OnboardingPage() {
                         border: `1px solid rgba(var(--primary-2), .20)`,
                       }}
                     >
-                      {acceptingId === p.invitationId ? "Accepting..." : "Accept Assignment"}
+                      {acceptingId === p.invitationId ? "Accepting..." : "Accept Invitation"}
                     </button>
                   </div>
                 </div>

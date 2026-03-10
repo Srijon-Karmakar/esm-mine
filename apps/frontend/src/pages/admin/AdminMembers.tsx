@@ -8,6 +8,7 @@ import {
   updateClubMemberRole,
   type ClubMember,
   type PendingSignup,
+  type PendingSignupsScope,
   type PrimaryRole,
   type SubRole,
 } from "../../api/admin.api";
@@ -37,6 +38,7 @@ type Ctx = {
 const ALL_PRIMARY: PrimaryRole[] = ["MEMBER", "PLAYER", "MANAGER", "ADMIN"];
 const ALL_SUB: SubRole[] = ["COACH", "PHYSIO", "AGENT", "NUTRITIONIST", "PITCH_MANAGER", "CAPTAIN"];
 const CAPTAIN_SUB_ROLE: SubRole = "CAPTAIN";
+const GLOBAL_SIGNUP_QUERY_MIN = 2;
 
 function canUseSubRole(primary: PrimaryRole, subRole: SubRole) {
   if (subRole === CAPTAIN_SUB_ROLE) return primary === "PLAYER";
@@ -80,6 +82,14 @@ export default function AdminMembers() {
   const [assignPrimaryByUserId, setAssignPrimaryByUserId] = useState<Record<string, PrimaryRole>>({});
   const [assignSubRolesByUserId, setAssignSubRolesByUserId] = useState<Record<string, SubRole[]>>({});
   const [query, setQuery] = useState("");
+  const [signupScope, setSignupScope] = useState<PendingSignupsScope>("CLUB");
+  const [signupSearchInput, setSignupSearchInput] = useState("");
+  const [signupSearch, setSignupSearch] = useState("");
+  const [signupPage, setSignupPage] = useState(1);
+  const [signupPageSize, setSignupPageSize] = useState(25);
+  const [signupTotal, setSignupTotal] = useState(0);
+  const [signupTotalPages, setSignupTotalPages] = useState(0);
+  const [signupHasNext, setSignupHasNext] = useState(false);
 
   const load = useCallback(async () => {
     if (!clubId) {
@@ -88,21 +98,64 @@ export default function AdminMembers() {
       return;
     }
 
+    const effectiveSignupQuery = signupSearch.trim();
+    const canRunGlobalLookup =
+      signupScope === "CLUB" || effectiveSignupQuery.length >= GLOBAL_SIGNUP_QUERY_MIN;
+    const emptySignupResult = {
+      users: [] as PendingSignup[],
+      pagination: {
+        page: signupPage,
+        pageSize: signupPageSize,
+        total: 0,
+        totalPages: 0,
+        hasNext: false,
+        scope: signupScope,
+        q: effectiveSignupQuery,
+      },
+    };
+
     setLoading(true);
     setErr(null);
     try {
       const [memberRows, signupRows] = await Promise.all([
         canReadMembers ? getClubMembers(clubId) : Promise.resolve([]),
-        canAssignSignup ? getPendingSignups(clubId) : Promise.resolve([]),
+        canAssignSignup
+          ? canRunGlobalLookup
+            ? getPendingSignups(clubId, {
+                scope: signupScope,
+                q: effectiveSignupQuery || undefined,
+                page: signupPage,
+                pageSize: signupPageSize,
+              })
+            : Promise.resolve(emptySignupResult)
+          : Promise.resolve(emptySignupResult),
       ]);
       setMembers(memberRows || []);
-      setPendingSignups(signupRows || []);
+      setPendingSignups(signupRows?.users || []);
+      setSignupTotal(Number(signupRows?.pagination?.total || 0));
+      setSignupTotalPages(Number(signupRows?.pagination?.totalPages || 0));
+      setSignupHasNext(Boolean(signupRows?.pagination?.hasNext));
+      if (
+        signupPage > 1 &&
+        Number(signupRows?.pagination?.totalPages || 0) > 0 &&
+        signupPage > Number(signupRows?.pagination?.totalPages || 0)
+      ) {
+        setSignupPage(Number(signupRows?.pagination?.totalPages || 1));
+      }
     } catch (e: unknown) {
       setErr(messageOf(e, "Failed to load member data."));
     } finally {
       setLoading(false);
     }
-  }, [canAssignSignup, canReadMembers, clubId]);
+  }, [
+    canAssignSignup,
+    canReadMembers,
+    clubId,
+    signupPage,
+    signupPageSize,
+    signupScope,
+    signupSearch,
+  ]);
 
   useEffect(() => {
     load();
@@ -165,7 +218,7 @@ export default function AdminMembers() {
 
   const onAssignSignup = async (signup: PendingSignup) => {
     if (!canAssignSignup) {
-      setToast({ type: "err", msg: "You do not have permission to assign signups." });
+      setToast({ type: "err", msg: "You do not have permission to invite signups." });
       return;
     }
 
@@ -178,14 +231,25 @@ export default function AdminMembers() {
       });
       setToast({
         type: "ok",
-        msg: `Assignment saved for user ID ${signup.id}. User is now locked to this club onboarding.`,
+        msg: `Invitation sent for user ID ${signup.id}. Member can now accept from onboarding.`,
       });
       await load();
     } catch (e: unknown) {
-      setToast({ type: "err", msg: messageOf(e, "Failed to assign role.") });
+      setToast({ type: "err", msg: messageOf(e, "Failed to send invitation.") });
     } finally {
       setAssigningId(null);
     }
+  };
+
+  const applySignupSearch = () => {
+    setSignupPage(1);
+    setSignupSearch(signupSearchInput.trim());
+  };
+
+  const clearSignupSearch = () => {
+    setSignupSearchInput("");
+    setSignupSearch("");
+    setSignupPage(1);
   };
 
   const onSave = async (userId: string, primary: PrimaryRole, subRoles: SubRole[]) => {
@@ -251,7 +315,7 @@ export default function AdminMembers() {
     <PageWrap>
       <Hero
         title="Member Command"
-        subtitle="Review club members, assign pending signups by user ID, and maintain role structure."
+        subtitle="Review club members, send signup invitations by user ID, and maintain role structure."
         right={<DotTag tone={canEditAny ? "warn" : "default"}>{canEditAny ? "EDIT ENABLED" : "READ ONLY"}</DotTag>}
       />
 
@@ -287,11 +351,69 @@ export default function AdminMembers() {
       <div className="grid gap-4 xl:grid-cols-12">
         <Section
           title="Signup Intake Queue"
-          subtitle="Assign role with user ID workflow."
+          subtitle="Send invitation with role selection. Member must accept in onboarding."
           className="xl:col-span-8"
-          right={<DotTag tone={pendingSignups.length > 0 ? "warn" : "ok"}>{pendingSignups.length}</DotTag>}
+          right={
+            <div className="flex flex-wrap items-center gap-2">
+              <DotTag tone={pendingSignups.length > 0 ? "warn" : "ok"}>{signupTotal}</DotTag>
+              <select
+                value={signupScope}
+                onChange={(event) => {
+                  const nextScope = event.target.value as PendingSignupsScope;
+                  setSignupScope(nextScope);
+                  setSignupPage(1);
+                  if (nextScope === "CLUB") {
+                    setSignupSearch("");
+                    setSignupSearchInput("");
+                  }
+                }}
+                className="rounded-full border bg-white/80 px-3 py-1 text-xs font-semibold outline-none"
+                style={{ borderColor: adminCardBorder }}
+              >
+                <option value="CLUB">Club Queue</option>
+                <option value="GLOBAL">Global Lookup</option>
+              </select>
+              <input
+                value={signupSearchInput}
+                onChange={(event) => setSignupSearchInput(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") applySignupSearch();
+                }}
+                placeholder={signupScope === "GLOBAL" ? "Search name, email, ID" : "Switch to Global Lookup to search"}
+                disabled={signupScope !== "GLOBAL"}
+                className={cx(
+                  "rounded-full border bg-white/80 px-3 py-1 text-xs font-semibold outline-none",
+                  signupScope !== "GLOBAL" && "cursor-not-allowed opacity-60"
+                )}
+                style={{ borderColor: adminCardBorder }}
+              />
+              <button
+                type="button"
+                onClick={applySignupSearch}
+                disabled={signupScope !== "GLOBAL"}
+                className="rounded-full border bg-white/80 px-3 py-1 text-xs font-semibold disabled:opacity-60"
+                style={{ borderColor: adminCardBorder }}
+              >
+                Search
+              </button>
+              {signupScope === "GLOBAL" && signupSearch ? (
+                <button
+                  type="button"
+                  onClick={clearSignupSearch}
+                  className="rounded-full border bg-white/80 px-3 py-1 text-xs font-semibold"
+                  style={{ borderColor: adminCardBorder }}
+                >
+                  Clear
+                </button>
+              ) : null}
+            </div>
+          }
         >
-          {!pendingSignups.length ? (
+          {signupScope === "GLOBAL" && signupSearch.length < GLOBAL_SIGNUP_QUERY_MIN ? (
+            <p className="text-sm text-[rgb(var(--muted))]">
+              Enter at least {GLOBAL_SIGNUP_QUERY_MIN} characters to search global signups.
+            </p>
+          ) : !pendingSignups.length ? (
             <p className="text-sm text-[rgb(var(--muted))]">No new signups waiting for assignment.</p>
           ) : (
             <div className="space-y-2">
@@ -383,8 +505,8 @@ export default function AdminMembers() {
                       </div>
                       <p className="text-xs text-[rgb(var(--muted))]">
                         {assigned
-                          ? `Assigned ${assigned.primary}${assigned.subRoles?.length ? ` + ${assigned.subRoles.join(", ")}` : ""} till ${formatDateTime(assigned.expiresAt)}`
-                          : "No assignment yet"}
+                          ? `Invitation pending: ${assigned.primary}${assigned.subRoles?.length ? ` + ${assigned.subRoles.join(", ")}` : ""} till ${formatDateTime(assigned.expiresAt)}`
+                          : "No invitation yet"}
                       </p>
                     </div>
 
@@ -399,13 +521,54 @@ export default function AdminMembers() {
                         border: `1px solid ${adminCardBorder}`,
                       }}
                     >
-                      {assigningId === signup.id ? "Saving..." : assigned ? "Update" : "Assign"}
+                      {assigningId === signup.id ? "Sending..." : assigned ? "Re-invite" : "Invite"}
                     </button>
                   </article>
                 );
               })}
             </div>
           )}
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t pt-3" style={{ borderColor: adminCardBorder }}>
+            <p className="text-xs text-[rgb(var(--muted))]">
+              Showing {pendingSignups.length} of {signupTotal}
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <select
+                value={signupPageSize}
+                onChange={(event) => {
+                  setSignupPageSize(Number(event.target.value));
+                  setSignupPage(1);
+                }}
+                className="rounded-full border bg-white/80 px-3 py-1 text-xs font-semibold outline-none"
+                style={{ borderColor: adminCardBorder }}
+              >
+                <option value={10}>10</option>
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+              </select>
+              <button
+                type="button"
+                onClick={() => setSignupPage((prev) => Math.max(1, prev - 1))}
+                disabled={signupPage <= 1}
+                className="rounded-full border bg-white/80 px-3 py-1 text-xs font-semibold disabled:opacity-60"
+                style={{ borderColor: adminCardBorder }}
+              >
+                Prev
+              </button>
+              <span className="text-xs font-semibold text-[rgb(var(--muted))]">
+                Page {signupPage} / {Math.max(1, signupTotalPages || 1)}
+              </span>
+              <button
+                type="button"
+                onClick={() => setSignupPage((prev) => prev + 1)}
+                disabled={!signupHasNext}
+                className="rounded-full border bg-white/80 px-3 py-1 text-xs font-semibold disabled:opacity-60"
+                style={{ borderColor: adminCardBorder }}
+              >
+                Next
+              </button>
+            </div>
+          </div>
         </Section>
 
         <Section title="Role Rules" subtitle="Primary role + sub role guardrails." className="xl:col-span-4" dark>

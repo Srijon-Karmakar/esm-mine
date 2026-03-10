@@ -365,7 +365,7 @@ export default function Home() {
   const neuBtn = `
     transition-all duration-300 ease-out
     active:scale-[0.97]
-    shadow-[6px_6px_14px_rgba(0,0,0,0.12),-6px_-6px_14px_rgba(255,255,255,0.65)]
+    shadow-[6px_6px_14px_rgba(0,0,0,0.50),-6px_-6px_14px_rgba(255,255,255,0.65)]
     hover:shadow-[9px_9px_18px_rgba(0,0,0,0.14),-9px_-9px_18px_rgba(255,255,255,0.75)]
     active:shadow-[inset_6px_6px_12px_rgba(0,0,0,0.12),inset_-6px_-6px_12px_rgba(255,255,255,0.55)]
   `;
@@ -380,7 +380,7 @@ export default function Home() {
 
   const neuBtnCta = `
     transition-all duration-300 ease-out
-    shadow-[6px_6px_14px_rgba(0,0,0,0.10),-6px_-6px_14px_rgba(255,255,255,0.48)]
+    shadow-[6px_6px_14px_rgba(0,0,0,0.50),-6px_-6px_14px_rgba(255,255,255,0.48)]
     hover:translate-y-[1px]
     hover:shadow-[inset_-5px_-5px_10px_rgba(0,0,0,0.11),inset_5px_5px_10px_rgba(255,255,255,0.40)]
     active:translate-y-[2px]
@@ -627,7 +627,7 @@ export default function Home() {
                     </div>
                   </div>
 
-                  {/* ✅ Player aligned like target UI */}
+                 
                   <div className="pointer-events-none absolute left-[12%] sm:left-[10%] lg:left-[44%] bottom-[-6%] sm:bottom-[-7%] z-10">
                     <img
                       src="/images/player.png"
