@@ -187,7 +187,6 @@ import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { gsap } from "gsap";
 import {
-  Sparkles,
   BarChart2,
   ShoppingBag,
   Users,
@@ -202,6 +201,7 @@ import { api } from "../api/axios";
 import { clearAuth, getAccessToken } from "../utils/authStorage";
 import { resolveDashboardLanding } from "../utils/dashboardRouting";
 import ConfirmModal from "../components/ui/ConfirmModal";
+import Orb from "../components/Orb";
 
 // --- Types ---
 type UserData = {
@@ -237,6 +237,7 @@ function isAuthError(error: unknown) {
 export default function Home() {
   const navigate = useNavigate();
   const rootRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   // reactive token
   const [token, setToken] = useState<string | null>(() => getAccessToken());
@@ -245,6 +246,9 @@ export default function Home() {
   const [loadingMe, setLoadingMe] = useState(false);
   const [dashboardEntry, setDashboardEntry] = useState("/dashboard");
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchActiveIndex, setSearchActiveIndex] = useState(0);
+  const [searchFocused, setSearchFocused] = useState(false);
 
   // --- Fetch /auth/me when token exists ---
   useEffect(() => {
@@ -300,6 +304,110 @@ export default function Home() {
     setToken(null);
     setUser(null);
     navigate("/", { replace: true });
+  };
+
+  const searchCatalog = useMemo(
+    () => [
+      {
+        id: "dashboard",
+        label: "Dashboard",
+        path: "/dashboard",
+        description: "Club workspace, roles and operations",
+        keywords: ["club", "members", "admin", "operations", "home"],
+      },
+      {
+        id: "ai",
+        label: "AI Module",
+        path: "/ai",
+        description: "AI analytics and insights",
+        keywords: ["insights", "analytics", "assistant", "model"],
+      },
+      {
+        id: "marketplace",
+        label: "Marketplace",
+        path: "/marketplace",
+        description: "Players, offers and hiring",
+        keywords: ["transfer", "offers", "talent", "recruitment"],
+      },
+      {
+        id: "social",
+        label: "Social Feed",
+        path: "/dashboard/social",
+        description: "Posts, comments and reactions",
+        keywords: ["feed", "posts", "media", "community"],
+      },
+      {
+        id: "login",
+        label: "Login",
+        path: "/login",
+        description: "Sign in to your account",
+        keywords: ["signin", "auth", "access"],
+      },
+      {
+        id: "register",
+        label: "Register",
+        path: "/register",
+        description: "Create a new account",
+        keywords: ["signup", "join", "create account"],
+      },
+    ],
+    []
+  );
+
+  const searchResults = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    const base = searchCatalog
+      .map((item) => {
+        const haystack = [item.label, item.description, item.path, ...item.keywords]
+          .join(" ")
+          .toLowerCase();
+
+        if (!q) {
+          if (!token && (item.path === "/dashboard" || item.path === "/dashboard/social")) {
+            return null;
+          }
+          return { ...item, score: 1 };
+        }
+
+        if (!haystack.includes(q)) return null;
+
+        let score = 1;
+        if (item.label.toLowerCase().startsWith(q)) score += 6;
+        if (item.path.toLowerCase().includes(q)) score += 4;
+        if (item.description.toLowerCase().includes(q)) score += 2;
+        if (item.keywords.some((k) => k.toLowerCase().includes(q))) score += 3;
+
+        return { ...item, score };
+      })
+      .filter((item): item is NonNullable<typeof item> => !!item)
+      .sort((a, b) => b.score - a.score);
+
+    return base.slice(0, 6);
+  }, [searchCatalog, searchQuery, token]);
+
+  useEffect(() => {
+    setSearchActiveIndex(0);
+  }, [searchQuery]);
+
+  const resolveSearchPath = (path: string) => {
+    if (path === "/dashboard") return dashboardEntry;
+    return path;
+  };
+
+  const handleSearchSelect = (path: string) => {
+    const resolved = resolveSearchPath(path);
+    if (resolved === "/login" || resolved === "/register") {
+      navigate(resolved);
+      return;
+    }
+    handleModuleNavigation(resolved);
+  };
+
+  const onSearchSubmit = () => {
+    if (!searchResults.length) return;
+    const next = searchResults[Math.max(0, Math.min(searchActiveIndex, searchResults.length - 1))];
+    handleSearchSelect(next.path);
+    setSearchFocused(false);
   };
 
   // --- GSAP animations (subtle, smooth) ---
@@ -456,7 +564,17 @@ export default function Home() {
                 {renderSidebarIcon({
                   label: "AI",
                   onClick: () => handleModuleNavigation("/ai"),
-                  children: <Sparkles size={22} />,
+                  children: (
+                    <div className="h-8 w-8 overflow-hidden rounded-full border border-white/20 bg-black/70">
+                      <Orb
+                        hoverIntensity={2}
+                        rotateOnHover
+                        hue={0}
+                        forceHoverState={false}
+                        backgroundColor="#000000"
+                      />
+                    </div>
+                  ),
                 })}
                 {renderSidebarIcon({
                   label: "Dashboard",
@@ -651,26 +769,91 @@ export default function Home() {
                       "shadow-[0_22px_50px_rgba(95,94,166,0.28)]"
                     )}
                   >
-                    <div className="absolute right-5 top-5 sm:right-6 sm:top-6 z-20">
-                      <button
-                        onClick={() => handleModuleNavigation("/ai")}
+                    <div className="absolute right-5 top-5 sm:right-6 sm:top-6 z-20 w-[calc(100%-2.5rem)] sm:w-[calc(100%-3rem)] max-w-[420px]">
+                      <form
+                        onSubmit={(event) => {
+                          event.preventDefault();
+                          onSearchSubmit();
+                        }}
                         className={cx(
                           "hs-searchPulse",
-                          "flex items-center gap-2 rounded-full",
-                          "px-4 py-2.5",
-                          "bg-[#0B0B0B] text-white text-sm font-medium",
-                          "shadow-[0_18px_35px_rgba(0,0,0,0.28)]",
-                          "transition-transform active:scale-[0.98]"
+                          "flex items-center gap-2 rounded-2xl border border-white/15",
+                          "bg-[#0B0B0B]/85 px-3 py-2.5 backdrop-blur",
+                          "shadow-[0_18px_35px_rgba(0,0,0,0.28)]"
                         )}
-                        title="Search / Explore"
+                        title="Search modules and jump"
                       >
-                        <Search size={16} />
-                        Search
-                      </button>
+                        <Search size={16} className="shrink-0 text-white/80" />
+                        <input
+                          ref={searchInputRef}
+                          value={searchQuery}
+                          onChange={(event) => setSearchQuery(event.target.value)}
+                          onFocus={() => setSearchFocused(true)}
+                          onBlur={() => {
+                            window.setTimeout(() => setSearchFocused(false), 120);
+                          }}
+                          onKeyDown={(event) => {
+                            if (!searchResults.length) return;
+                            if (event.key === "ArrowDown") {
+                              event.preventDefault();
+                              setSearchActiveIndex((prev) => Math.min(prev + 1, searchResults.length - 1));
+                            }
+                            if (event.key === "ArrowUp") {
+                              event.preventDefault();
+                              setSearchActiveIndex((prev) => Math.max(prev - 1, 0));
+                            }
+                            if (event.key === "Escape") {
+                              setSearchFocused(false);
+                              searchInputRef.current?.blur();
+                            }
+                          }}
+                          placeholder={token ? "Search dashboard, social, AI, marketplace..." : "Search pages..."}
+                          className="w-full bg-transparent text-sm text-white placeholder:text-white/60 outline-none"
+                          aria-label="Search modules"
+                        />
+                        <button
+                          type="submit"
+                          className="rounded-full border border-white/20 px-3 py-1 text-xs font-semibold text-white/90 hover:bg-white/10"
+                        >
+                          Go
+                        </button>
+                      </form>
+
+                      {(searchFocused || searchQuery.trim().length > 0) && (
+                        <div className="mt-2 overflow-hidden rounded-2xl border border-white/15 bg-[#0B0B0B]/85 shadow-[0_18px_35px_rgba(0,0,0,0.28)] backdrop-blur">
+                          {searchResults.length ? (
+                            <ul className="max-h-[260px] overflow-y-auto py-1">
+                              {searchResults.map((item, index) => {
+                                const active = index === searchActiveIndex;
+                                return (
+                                  <li key={item.id}>
+                                    <button
+                                      type="button"
+                                      onMouseEnter={() => setSearchActiveIndex(index)}
+                                      onClick={() => handleSearchSelect(item.path)}
+                                      className={cx(
+                                        "w-full px-3 py-2 text-left transition",
+                                        active ? "bg-white/15" : "hover:bg-white/10"
+                                      )}
+                                    >
+                                      <div className="text-sm font-semibold text-white">{item.label}</div>
+                                      <div className="text-xs text-white/70">{item.description}</div>
+                                    </button>
+                                  </li>
+                                );
+                              })}
+                            </ul>
+                          ) : (
+                            <div className="px-3 py-3 text-xs text-white/70">
+                              No matches found. Try keywords like dashboard, social, or marketplace.
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     <div className="absolute left-6 sm:left-8 top-1/2 -translate-y-1/2 text-[180px] sm:text-[210px] font-semibold text-white/12 select-none leading-none tracking-tight">
-
+                      {searchQuery.trim() ? "SEARCH" : "EXPLORE"}
                     </div>
 
                     <div className="absolute left-6 sm:left-8 bottom-6 sm:bottom-7 z-20">
