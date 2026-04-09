@@ -242,10 +242,10 @@ export default function ProfilePage() {
               </p>
               <button
                 type="submit"
-                disabled={mutation.isLoading}
+                disabled={mutation.status === "loading"}
                 className="rounded-full bg-[rgb(var(--primary))] px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-[rgb(var(--primary-2))] shadow-lg transition hover:opacity-90 disabled:opacity-60"
               >
-                {mutation.isLoading ? "Saving..." : "Save profile"}
+                {mutation.status === "loading" ? "Saving..." : "Save profile"}
               </button>
             </div>
           </form>

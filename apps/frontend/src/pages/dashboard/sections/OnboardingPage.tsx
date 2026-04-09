@@ -5,7 +5,6 @@ import {
   acceptMyAssignment,
   createClub,
   getMyPendingAssignments,
-  type MyPendingAssignment,
 } from "../../../api/admin.api";
 import { useMe } from "../../../hooks/useMe";
 import {
