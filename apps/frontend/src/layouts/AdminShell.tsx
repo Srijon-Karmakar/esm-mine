@@ -41,7 +41,7 @@ const adminTopNav: { key: NavKey; label: string; to: string; permission: RolePer
   { key: "overview", label: "Overview", to: "/admin", permission: "clubs.read" },
   { key: "members", label: "Members", to: "/admin/members", permission: "members.read" },
   { key: "squads", label: "Squads", to: "/admin/squads", permission: "squads.read" },
-  { key: "matches", label: "Matches", to: "/admin/matches", permission: "matches.read" },
+  { key: "matches", label: "Schedule", to: "/admin/matches", permission: "matches.read" },
   { key: "operations", label: "Operations", to: "/admin/operations", permission: "operations.read" },
   { key: "messages", label: "Messages", to: "/dashboard/messages", permission: "membership.self.read" },
   { key: "analytics", label: "Analytics", to: "/admin/analytics", permission: "stats.read" },

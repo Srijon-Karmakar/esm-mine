@@ -12,7 +12,7 @@ export function TopNav({
     "Overview",
     "Teams",
     "Training",
-    "Matches",
+    "Schedule",
     "Medical",
     "Analytics",
     "Finance",

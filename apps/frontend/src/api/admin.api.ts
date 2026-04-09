@@ -150,6 +150,11 @@ export type ClubPlayer = {
   membershipId: string;
   isCaptain?: boolean;
   profile?: {
+    dob?: string | null;
+    nationality?: string | null;
+    heightCm?: number | null;
+    weightKg?: number | null;
+    dominantFoot?: "RIGHT" | "LEFT" | "BOTH" | null;
     positions?: string[];
   } | null;
 };

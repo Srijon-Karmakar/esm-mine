@@ -31,7 +31,7 @@
 
 // const sectionItems: SidebarItem[] = [
 //   { label: "Training", to: "/dashboard/training" },
-//   { label: "Matches", to: "/dashboard/matches" },
+//   { label: "Schedule", to: "/dashboard/matches" },
 //   { label: "Stats", to: "/dashboard/stats" },
 //   { label: "Medical", to: "/dashboard/medical" },
 //   { label: "Messages", to: "/dashboard/messages" },
@@ -224,7 +224,7 @@
 //       training: "Load  -  sessions  -  recovery",
 //       wearables: "HRV  -  GPS  -  sleep",
 //       contracts: "Contract  -  bonuses",
-//       calendar: "Matches  -  sessions",
+//       calendar: "Schedule  -  sessions",
 //       reviews: "Coach feedback",
 //       settings: "Preferences",
 //     };
@@ -633,7 +633,7 @@ const topNavByRole: Partial<Record<DashboardRoleKey, Array<{ key: NavKey; label:
 
 const defaultSectionItems: SidebarItem[] = [
   { label: "Training", to: "/dashboard/training" },
-  { label: "Matches", to: "/dashboard/matches" },
+  { label: "Schedule", to: "/dashboard/matches" },
   { label: "Stats", to: "/dashboard/stats" },
   { label: "Medical", to: "/dashboard/medical" },
   { label: "Messages", to: "/dashboard/messages" },
@@ -663,7 +663,7 @@ const sectionItemsByRole: Partial<Record<DashboardRoleKey, SidebarItem[]>> = {
   ],
   COACH: [
     { label: "Training", to: "/dashboard/training" },
-    { label: "Matches", to: "/dashboard/matches" },
+    { label: "Schedule", to: "/dashboard/matches" },
     { label: "Stats", to: "/dashboard/stats" },
     { label: "Messages", to: "/dashboard/messages" },
     { label: "Social", to: "/dashboard/social" },
@@ -672,13 +672,13 @@ const sectionItemsByRole: Partial<Record<DashboardRoleKey, SidebarItem[]>> = {
   PHYSIO: [
     { label: "Medical", to: "/dashboard/medical" },
     { label: "Training", to: "/dashboard/training" },
-    { label: "Matches", to: "/dashboard/matches" },
+    { label: "Schedule", to: "/dashboard/matches" },
     { label: "Messages", to: "/dashboard/messages" },
     { label: "Social", to: "/dashboard/social" },
     { label: "Settings", to: "/dashboard/settings" },
   ],
   AGENT: [
-    { label: "Matches", to: "/dashboard/matches" },
+    { label: "Schedule", to: "/dashboard/matches" },
     { label: "Stats", to: "/dashboard/stats" },
     { label: "Messages", to: "/dashboard/messages" },
     { label: "Social", to: "/dashboard/social" },
@@ -693,7 +693,7 @@ const sectionItemsByRole: Partial<Record<DashboardRoleKey, SidebarItem[]>> = {
     { label: "Settings", to: "/dashboard/settings" },
   ],
   PITCH_MANAGER: [
-    { label: "Matches", to: "/dashboard/matches" },
+    { label: "Schedule", to: "/dashboard/matches" },
     { label: "Training", to: "/dashboard/training" },
     { label: "Messages", to: "/dashboard/messages" },
     { label: "Social", to: "/dashboard/social" },
@@ -917,7 +917,7 @@ export default function AppShell() {
       training: "Load  -  sessions  -  recovery",
       wearables: "HRV  -  GPS  -  sleep",
       contracts: "Contract  -  bonuses",
-      calendar: "Matches  -  sessions",
+      calendar: "Schedule  -  sessions",
       reviews: "Coach feedback",
       settings: "Preferences",
       profile: "Profile data",

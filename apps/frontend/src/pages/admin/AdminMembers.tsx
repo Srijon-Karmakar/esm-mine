@@ -487,11 +487,13 @@ export default function AdminMembers() {
                               }
                               disabled={!canAssignSignup || !canEditSubRoles || !roleAllowed}
                               className={cx(
-                                "rounded-full border px-2.5 py-1 text-[10px] font-extrabold",
-                                active ? "bg-[rgba(var(--primary),.24)]" : "bg-white/70",
+                                "rounded-full border px-2.5 py-1 text-[10px] font-extrabold transition",
+                                active ? "bg-[rgba(var(--primary),.24)] text-[rgb(var(--text))]" : "bg-white/70 text-[rgb(var(--muted))]",
                                 (!canAssignSignup || !canEditSubRoles || !roleAllowed) && "cursor-not-allowed opacity-60"
                               )}
-                              style={{ borderColor: adminCardBorder }}
+                              style={{
+                                borderColor: active ? "rgba(var(--primary),.8)" : adminCardBorder,
+                              }}
                               title={
                                 !roleAllowed
                                   ? "Captain can be assigned only when primary role is PLAYER"
@@ -720,31 +722,33 @@ function MemberCard({
         </div>
 
         <div className="flex flex-wrap gap-2">
-          {ALL_SUB.map((subRole) => {
-            const active = subRoles.includes(subRole);
-            const roleAllowed = canUseSubRole(primary, subRole);
-            return (
-              <button
-                key={subRole}
-                type="button"
-                onClick={() => toggleSubRole(subRole)}
-                disabled={!canEditSubRoles || !roleAllowed}
-                className={cx(
-                  "rounded-full border px-3 py-1 text-[11px] font-extrabold",
-                  active ? "bg-[rgba(var(--primary),.24)]" : "bg-white/70",
-                  (!canEditSubRoles || !roleAllowed) && "cursor-not-allowed opacity-60"
-                )}
-                style={{ borderColor: adminCardBorder }}
-                title={
-                  !roleAllowed
-                    ? "Captain can be assigned only when primary role is PLAYER"
-                    : undefined
-                }
-              >
-                {subRole}
-              </button>
-            );
-          })}
+            {ALL_SUB.map((subRole) => {
+              const active = subRoles.includes(subRole);
+              const roleAllowed = canUseSubRole(primary, subRole);
+              return (
+                <button
+                  key={subRole}
+                  type="button"
+                  onClick={() => toggleSubRole(subRole)}
+                  disabled={!canEditSubRoles || !roleAllowed}
+                  className={cx(
+                    "rounded-full border px-3 py-1 text-[11px] font-extrabold transition",
+                    active ? "bg-[rgba(var(--primary),.24)] text-[rgb(var(--text))]" : "bg-white/70 text-[rgb(var(--muted))]",
+                    (!canEditSubRoles || !roleAllowed) && "cursor-not-allowed opacity-60"
+                  )}
+                  style={{
+                    borderColor: active ? "rgba(var(--primary),.8)" : adminCardBorder,
+                  }}
+                  title={
+                    !roleAllowed
+                      ? "Captain can be assigned only when primary role is PLAYER"
+                      : undefined
+                  }
+                >
+                  {subRole}
+                </button>
+              );
+            })}
         </div>
 
         <div className="flex items-center justify-end gap-2">

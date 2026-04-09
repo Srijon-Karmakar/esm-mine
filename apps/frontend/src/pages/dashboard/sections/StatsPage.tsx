@@ -8,7 +8,14 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { getLeaderboard, type LeaderboardMetric, type LeaderboardRow } from "../../../api/admin.api";
+import { useQuery } from "@tanstack/react-query";
+import {
+  getClubPlayers,
+  getLeaderboard,
+  type ClubPlayer,
+  type LeaderboardMetric,
+  type LeaderboardRow,
+} from "../../../api/admin.api";
 import { useDashboardCharts, useDashboardOverview } from "../../../hooks/useDashboard";
 import { useMe } from "../../../hooks/useMe";
 import {
@@ -19,6 +26,7 @@ import {
   Stat,
   adminCardBorder,
 } from "../../admin/admin-ui";
+import { calculateAge, calculateBmi } from "../../../utils/playerProfile";
 
 type Range = "7d" | "30d" | "90d";
 type OverviewData = {
@@ -26,6 +34,22 @@ type OverviewData = {
 };
 type ChartsData = {
   series?: Array<{ name: string; points: Array<{ x: string; y: number }> }>;
+};
+
+const HEIGHT_BUCKETS = [
+  { label: "<160cm", min: 0, max: 159 },
+  { label: "160-169cm", min: 160, max: 169 },
+  { label: "170-179cm", min: 170, max: 179 },
+  { label: "180cm+", min: 180, max: Infinity },
+] as const;
+
+type HeightBucket = (typeof HEIGHT_BUCKETS)[number];
+
+const DOMINANT_FOOT_LABELS: Record<string, string> = {
+  RIGHT: "Right",
+  LEFT: "Left",
+  BOTH: "Both / Ambidextrous",
+  Unspecified: "Not specified",
 };
 
 function normalizeLabel(day: string) {
@@ -42,6 +66,12 @@ function metricValue(row: LeaderboardRow, metric: LeaderboardMetric) {
   return 0;
 }
 
+function hasPlayerProfile(
+  player: ClubPlayer
+): player is ClubPlayer & { profile: NonNullable<ClubPlayer["profile"]> } {
+  return Boolean(player.profile);
+}
+
 export default function StatsPage() {
   const [range, setRange] = useState<Range>("30d");
   const [metric, setMetric] = useState<LeaderboardMetric>("goals");
@@ -56,6 +86,11 @@ export default function StatsPage() {
   const charts = (chartsQuery.data || {}) as ChartsData;
   const meData = (meQuery.data || {}) as { activeClubId?: string | null };
   const clubId = meData.activeClubId || localStorage.getItem("activeClubId") || "";
+  const playersQuery = useQuery({
+    queryKey: ["club-players", clubId],
+    queryFn: () => getClubPlayers(clubId),
+    enabled: Boolean(clubId),
+  });
 
   useEffect(() => {
     let alive = true;
@@ -78,7 +113,88 @@ export default function StatsPage() {
     };
   }, [clubId, metric]);
 
-  const loading = overviewQuery.isLoading || chartsQuery.isLoading || meQuery.isLoading;
+  const loading =
+    overviewQuery.isLoading ||
+    chartsQuery.isLoading ||
+    meQuery.isLoading ||
+    playersQuery.isLoading;
+
+  const playerProfiles = useMemo(() => {
+    const rows = playersQuery.data || [];
+    return rows.filter(hasPlayerProfile);
+  }, [playersQuery.data]);
+
+  const average = (values: number[]) =>
+    values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null;
+
+  const ages = playerProfiles
+    .map((player) => calculateAge(player.profile.dob))
+    .filter((value): value is number => typeof value === "number");
+  const avgAge = ages.length ? Math.round(average(ages) ?? 0) : null;
+
+  const heights = playerProfiles
+    .map((player) => player.profile.heightCm)
+    .filter((value): value is number => typeof value === "number");
+  const avgHeight = heights.length ? Math.round(average(heights) ?? 0) : null;
+
+  const weights = playerProfiles
+    .map((player) => player.profile.weightKg)
+    .filter((value): value is number => typeof value === "number");
+  const avgWeight = weights.length ? Math.round(average(weights) ?? 0) : null;
+
+  const bmis = playerProfiles
+    .map((player) => calculateBmi(player.profile.heightCm, player.profile.weightKg))
+    .filter((value): value is number => typeof value === "number");
+  const avgBmi = bmis.length ? Number((average(bmis) ?? 0).toFixed(1)) : null;
+
+  const heightDistribution = useMemo(() => {
+    return HEIGHT_BUCKETS.map((bucket) => {
+      const count = playerProfiles.filter((player) => {
+        const height = player.profile.heightCm;
+        if (!height) return false;
+        if (bucket.max === Infinity) return height >= bucket.min;
+        return height >= bucket.min && height <= bucket.max;
+      }).length;
+      return { label: bucket.label, count };
+    });
+  }, [playerProfiles]);
+
+  const positionCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const profile of playerProfiles) {
+      (profile.profile.positions || []).forEach((pos) => {
+        const normalized = pos.toUpperCase();
+        counts[normalized] = (counts[normalized] || 0) + 1;
+      });
+    }
+    return counts;
+  }, [playerProfiles]);
+  const positionList = useMemo(
+    () =>
+      Object.entries(positionCounts)
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, 6),
+    [positionCounts]
+  );
+
+  const footCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const profile of playerProfiles) {
+      const foot = profile.profile.dominantFoot || "Unspecified";
+      counts[foot] = (counts[foot] || 0) + 1;
+    }
+    return counts;
+  }, [playerProfiles]);
+  const footList = useMemo(
+    () =>
+      Object.entries(footCounts).map(([key, count]) => ({
+        label: DOMINANT_FOOT_LABELS[key] || key,
+        count,
+      })),
+    [footCounts]
+  );
+  const heightMax = Math.max(...heightDistribution.map((bucket) => bucket.count), 1);
+  const totalFoot = footList.reduce((sum, item) => sum + item.count, 0);
 
   const byKey = useMemo(() => {
     const map = new Map<string, number>();
@@ -248,6 +364,101 @@ export default function StatsPage() {
           )}
         </Section>
       </div>
+      <Section
+        title="Profile Analytics"
+        subtitle="Aggregated metrics from submitted player bios."
+        className="mt-6"
+      >
+        {playersQuery.isError && (
+          <div
+            className="rounded-2xl border px-4 py-3 text-sm font-semibold text-rose-700"
+            style={{ borderColor: adminCardBorder, background: "rgba(255,255,255,.65)" }}
+          >
+            Unable to load player profile stats.
+          </div>
+        )}
+
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <Stat label="Profiled players" value={playerProfiles.length} />
+          <Stat label="Avg age" value={avgAge ? `${avgAge} yrs` : "-"} />
+          <Stat label="Avg height" value={avgHeight ? `${avgHeight} cm` : "-"} />
+          <Stat label="Avg weight" value={avgWeight ? `${avgWeight} kg` : "-"} />
+        </div>
+
+        <div className="mt-4 grid gap-4 lg:grid-cols-3">
+          <div
+            className="rounded-2xl border px-4 py-4"
+            style={{ borderColor: adminCardBorder }}
+          >
+            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[rgb(var(--muted))]">
+              Height distribution
+            </p>
+            <div className="mt-3 space-y-3">
+              {heightDistribution.map((bucket) => {
+                const width = Math.round((bucket.count / heightMax) * 100);
+                return (
+                  <div key={bucket.label}>
+                    <div className="flex items-center justify-between text-xs text-[rgb(var(--muted))]">
+                      <span>{bucket.label}</span>
+                      <span>{bucket.count}</span>
+                    </div>
+                    <div className="mt-1 h-2 rounded-full bg-white/15">
+                      <div
+                        className="h-2 rounded-full bg-[rgb(var(--primary))]"
+                        style={{ width: `${width}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div
+            className="rounded-2xl border px-4 py-4"
+            style={{ borderColor: adminCardBorder }}
+          >
+            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[rgb(var(--muted))]">
+              Dominant foot
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {footList.length ? (
+                footList.map((entry) => {
+                  const percent = totalFoot ? Math.round((entry.count / totalFoot) * 100) : 0;
+                  return (
+                    <DotTag key={entry.label} tone="ok">
+                      {entry.label}: {percent}%
+                    </DotTag>
+                  );
+                })
+              ) : (
+                <p className="text-xs text-[rgb(var(--muted))]">No foot data yet.</p>
+              )}
+            </div>
+          </div>
+
+          <div
+            className="rounded-2xl border px-4 py-4"
+            style={{ borderColor: adminCardBorder }}
+          >
+            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[rgb(var(--muted))]">
+              Positions
+            </p>
+            <div className="mt-3 space-y-2">
+              {positionList.length ? (
+                positionList.map(([position, count]) => (
+                  <div key={position} className="flex items-center justify-between text-sm">
+                    <span>{position}</span>
+                    <span className="text-xs text-[rgb(var(--muted))]">{count} players</span>
+                  </div>
+                ))
+              ) : (
+                <p className="text-xs text-[rgb(var(--muted))]">No position data yet.</p>
+              )}
+            </div>
+          </div>
+        </div>
+      </Section>
     </PageWrap>
   );
 }

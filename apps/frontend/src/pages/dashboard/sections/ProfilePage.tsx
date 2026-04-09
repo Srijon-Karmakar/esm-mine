@@ -12,6 +12,7 @@ import {
 } from "../../admin/admin-ui";
 import { getMyPlayerProfile, updateMyPlayerProfile } from "../../../api/players.api";
 import type { PlayerProfileDto } from "../../../api/players.api";
+import { calculateAge, calculateBmi, normalizePositions, toDateInput } from "../../../utils/playerProfile";
 
 type FormValues = {
   dob: string;
@@ -110,6 +111,9 @@ export default function ProfilePage() {
       </PageWrap>
     );
   }
+
+
+
 
   return (
     <PageWrap>
@@ -282,39 +286,5 @@ export default function ProfilePage() {
       </div>
     </PageWrap>
   );
-}
 
-function toDateInput(value?: string | null) {
-  if (!value) return "";
-  return value.split("T")[0];
-}
-
-function normalizePositions(input: string | null | undefined) {
-  if (!input) return [];
-  return input
-    .split(",")
-    .map((item) => item.trim().toUpperCase())
-    .filter(Boolean);
-}
-
-function calculateAge(dob?: string | null) {
-  if (!dob) return null;
-  const born = new Date(dob);
-  if (Number.isNaN(born.getTime())) return null;
-  const today = new Date();
-  let age = today.getFullYear() - born.getFullYear();
-  const monthDiff = today.getMonth() - born.getMonth();
-  const dayDiff = today.getDate() - born.getDate();
-  if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) {
-    age -= 1;
-  }
-  return age >= 0 ? age : null;
-}
-
-function calculateBmi(heightCm: number | null, weightKg: number | null) {
-  if (!heightCm || !weightKg) return null;
-  const meters = heightCm / 100;
-  if (meters <= 0) return null;
-  const bmi = weightKg / (meters * meters);
-  return Number.isFinite(bmi) ? Number(bmi.toFixed(1)) : null;
 }

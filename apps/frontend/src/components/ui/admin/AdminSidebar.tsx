@@ -45,7 +45,7 @@ const adminNav = [
     { label: "Overview", to: "/admin" },
     { label: "Members", to: "/admin/members" },
     { label: "Squads", to: "/admin/squads" },
-    { label: "Matches", to: "/admin/matches" },
+    { label: "Schedule", to: "/admin/matches" },
     { label: "Operations", to: "/admin/operations" },
     { label: "Messages", to: "/dashboard/messages" },
     { label: "Analytics", to: "/admin/analytics" },
