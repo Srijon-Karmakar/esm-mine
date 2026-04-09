@@ -51,7 +51,7 @@ function applyToCssVars(theme: ClubTheme) {
   root.setAttribute("data-theme", theme.mode === "dark" ? "dark" : "light");
 }
 
-const DEFAULT_THEME: ClubTheme = {
+export const DEFAULT_THEME: ClubTheme = {
   mode: "light",
   primary: "#FFC840",
   deep: "#141820",

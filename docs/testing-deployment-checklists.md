@@ -1,120 +1,98 @@
-# Testing and Deployment Checklists
+# Where To Deploy and Where To Test
 
-This project has two apps:
+This file is a tool/platform checklist for this repo:
 - `apps/frontend` (React + Vite)
-- `apps/api` (NestJS + Prisma + PostgreSQL)
+- `apps/api` (NestJS + Prisma)
+- PostgreSQL database
 
-Use the checklists below in two modes:
-- `Free`: no paid tooling required
-- `Paid`: production-grade tooling and services
+Pricing/features change often. Re-check each link before final purchase.
 
-## 1) Testing Checklist (Free)
+## 1) Where To Deploy (Free Options)
 
-- [ ] Install dependencies at repo root: `pnpm install`
-- [ ] Run monorepo lint: `pnpm lint`
-- [ ] Run monorepo type checks: `pnpm check-types`
-- [ ] Run monorepo build: `pnpm build`
-- [ ] Run API unit tests: `pnpm --filter api test`
-- [ ] Run API e2e tests: `pnpm --filter api test:e2e`
-- [ ] Run API coverage: `pnpm --filter api test:cov`
-- [ ] Validate Prisma schema and migrations:
-  - [ ] `pnpm --filter api exec prisma validate`
-  - [ ] `pnpm --filter api exec prisma migrate status`
-- [ ] Verify frontend production build: `pnpm --filter frontend build`
-- [ ] Smoke-test key flows manually in local/staging:
-  - [ ] Login/register/auth token refresh
-  - [ ] Club/member management
-  - [ ] Match/season CRUD
-  - [ ] Social upload flow (if enabled)
-  - [ ] AI endpoints (if enabled)
-- [ ] Add missing frontend automated tests (recommended baseline):
-  - [ ] Unit/component tests with Vitest + React Testing Library
-  - [ ] E2E tests with Playwright (critical journeys only)
-- [ ] Gate PRs with a free CI pipeline (for example GitHub Actions) running:
-  - [ ] `pnpm lint`
-  - [ ] `pnpm check-types`
-  - [ ] `pnpm --filter api test`
-  - [ ] `pnpm --filter frontend build`
+### Frontend (Vite build output)
+- [ ] Vercel Hobby (free for personal/non-commercial usage profile)
+- [ ] Netlify Free
+- [ ] Cloudflare Pages Free
 
-## 2) Testing Checklist (Paid)
+### API (NestJS service)
+- [ ] Render Free web service (good for preview/hobby; has free-tier limits)
+- [ ] Railway Free tier/trial credits
 
-- [ ] Everything in the free checklist
-- [ ] Add cross-browser/device E2E in a paid grid/cloud
-- [ ] Add visual regression testing for frontend UI
-- [ ] Add contract testing between frontend and API
-- [ ] Add load/performance test suite (API p95 latency, error rate, throughput)
-- [ ] Add security scanning in CI:
-  - [ ] SCA/dependency scanning
-  - [ ] SAST
-  - [ ] DAST for public endpoints
-- [ ] Add flaky test tracking and retry analytics
-- [ ] Add release-quality gates:
-  - [ ] Minimum API coverage threshold
-  - [ ] Max bundle-size budget for frontend
-  - [ ] Required passing staging smoke suite before production
+### PostgreSQL
+- [ ] Neon Free
+- [ ] Supabase Free
+- [ ] Render Postgres Free
 
-## 3) Deployment Checklist (Free)
+## 2) Where To Deploy (Paid Options)
 
-- [ ] Choose low-cost/free-tier hosting:
-  - [ ] Frontend static host
-  - [ ] API Node host
-  - [ ] Managed PostgreSQL (or self-hosted Postgres)
-- [ ] Confirm runtime versions:
-  - [ ] Node `>=18`
-  - [ ] pnpm `9.x`
-- [ ] Set required environment variables
-  - [ ] API required: `DATABASE_URL`, `JWT_ACCESS_SECRET`
-  - [ ] API recommended: `JWT_ACCESS_EXPIRES_IN`, `PLATFORM_ADMIN_EMAILS`
-  - [ ] API optional integrations:
-    - [ ] `OPENAI_API_KEY` (or `AI_OPENAI_API_KEY`)
-    - [ ] `OPENAI_MODEL` (or `AI_OPENAI_MODEL`)
-    - [ ] `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`, `CLOUDINARY_UPLOAD_FOLDER`
-  - [ ] Frontend required: `VITE_API_URL`
-- [ ] Run pre-deploy checks in CI:
-  - [ ] `pnpm lint`
-  - [ ] `pnpm check-types`
-  - [ ] `pnpm --filter api test`
-  - [ ] `pnpm --filter frontend build`
-- [ ] Build and deploy API
-  - [ ] Build command: `pnpm --filter api build`
-  - [ ] Start command (with migrations): `pnpm --filter api start:render`
-- [ ] Build and deploy frontend
-  - [ ] Build command: `pnpm --filter frontend build`
-  - [ ] Publish `apps/frontend/dist`
-- [ ] Verify database migrations are applied in production:
-  - [ ] `pnpm --filter api exec prisma migrate deploy`
-- [ ] Post-deploy smoke tests:
-  - [ ] API health and Swagger at `/docs`
-  - [ ] Auth/login
-  - [ ] One create/update/delete flow per critical module
-  - [ ] Frontend calls API correctly via `VITE_API_URL`
-- [ ] Keep a rollback plan:
-  - [ ] Previous frontend build artifact
-  - [ ] Previous API image/release
-  - [ ] Database restore point/backup snapshot
+### Frontend (production traffic)
+- [ ] Vercel Pro
+- [ ] Netlify Pro/Business
 
-## 4) Deployment Checklist (Paid)
+### API (production workloads)
+- [ ] Railway Hobby/Pro
+- [ ] Render paid instance types
+- [ ] Fly.io pay-as-you-go
 
-- [ ] Everything in the free checklist
-- [ ] Use separate environments: `dev`, `staging`, `production`
-- [ ] Use managed production infrastructure:
-  - [ ] Containerized API (e.g., ECS/Cloud Run/Kubernetes)
-  - [ ] Managed PostgreSQL with automated backups and PITR
-  - [ ] CDN + WAF in front of frontend/API
-- [ ] Use a secret manager (not plaintext env files in CI)
-- [ ] Use zero-downtime strategy:
-  - [ ] Blue/green or canary deploys
-  - [ ] Automated health checks and rollback
-- [ ] Add full observability:
-  - [ ] Centralized logs
-  - [ ] Metrics dashboards
-  - [ ] Error tracking and alerting
-  - [ ] Uptime checks and on-call routing
-- [ ] Add release governance:
-  - [ ] Change approval for production deploys
-  - [ ] Tagged releases + changelog
-  - [ ] Post-deploy verification checklist signoff
-- [ ] Add compliance and security controls:
-  - [ ] Periodic dependency patch windows
-  - [ ] Vulnerability SLA
-  - [ ] Audit log retention policy
+### PostgreSQL (production)
+- [ ] Neon Launch/Scale
+- [ ] Supabase Pro/Team
+- [ ] Managed cloud Postgres (AWS RDS / Cloud SQL / Azure Database)
+
+## 3) Where To Test (Free Options)
+
+### In repo / open-source tools
+- [ ] Backend tests: Jest (already in `apps/api`)
+- [ ] Frontend unit/component tests: Vitest + React Testing Library
+- [ ] Frontend e2e: Playwright (open source)
+
+### CI and cloud free tiers
+- [ ] GitHub Actions included free minutes for private repos, free standard runners on public repos
+- [ ] Cypress Cloud Free plan
+- [ ] Checkly Hobby (free synthetic checks)
+
+## 4) Where To Test (Paid Options)
+
+### E2E and test analytics
+- [ ] Cypress Cloud Team/Business
+- [ ] Checkly Starter/Team for synthetic API/browser checks
+
+### Cross-browser and real-device testing
+- [ ] BrowserStack paid plans
+- [ ] LambdaTest paid plans
+
+### Enterprise observability-style testing
+- [ ] Datadog Synthetic Monitoring
+- [ ] New Relic (higher check quotas and paid expansions)
+
+## 5) Suggested Stacks For This Project
+
+### Full free stack
+- [ ] Deploy FE on Vercel Hobby or Netlify Free
+- [ ] Deploy API on Render Free (or Railway free trial)
+- [ ] Use Neon Free or Supabase Free database
+- [ ] Test with Jest + Vitest + Playwright + GitHub Actions
+
+### Starter paid stack
+- [ ] Deploy FE on Vercel Pro
+- [ ] Deploy API on Railway Pro (or Render paid)
+- [ ] Use Neon Launch or Supabase Pro
+- [ ] Test with Cypress Cloud Team + BrowserStack
+
+## 6) Official Pricing/Plan Links
+
+- Vercel pricing: https://vercel.com/pricing
+- Netlify pricing: https://www.netlify.com/pricing
+- Cloudflare Pages pricing: https://developers.cloudflare.com/pages/functions/pricing/
+- Render free deploy docs: https://render.com/docs/free
+- Railway pricing: https://railway.com/pricing
+- Fly.io pricing: https://fly.io/pricing/
+- Neon pricing: https://neon.com/pricing
+- Supabase billing/plans: https://supabase.com/docs/guides/platform/billing-on-supabase
+- GitHub Actions billing: https://docs.github.com/en/billing/managing-billing-for-github-actions/about-billing-for-github-actions
+- Cypress Cloud pricing: https://www.cypress.io/pricing
+- Checkly pricing: https://www.checklyhq.com/pricing/
+- BrowserStack pricing: https://www.browserstack.com/pricing
+- LambdaTest pricing: https://www.lambdatest.com/pricing
+- Datadog pricing list: https://www.datadoghq.com/pricing/list/
+- New Relic pricing: https://newrelic.com/pricing

@@ -564,11 +564,12 @@ export default function Home() {
                 {renderSidebarIcon({
                   label: "AI",
                   onClick: () => handleModuleNavigation("/ai"),
+                  className: "h-12 w-12",
                   children: (
-                    <div className="h-8 w-8 overflow-hidden rounded-full border border-white/20 bg-black/70">
+                    <div className="h-10 w-10 scale-[1.45] overflow-hidden rounded-full saturate-[1.45] contrast-[1.18] brightness-[1.18] ">
                       <Orb
-                        hoverIntensity={2}
-                        rotateOnHover
+                        hoverIntensity={1}
+                        rotateOnHover={false}
                         hue={0}
                         forceHoverState={false}
                         backgroundColor="#000000"
@@ -769,7 +770,7 @@ export default function Home() {
                       "shadow-[0_22px_50px_rgba(95,94,166,0.28)]"
                     )}
                   >
-                    <div className="absolute right-5 top-5 sm:right-6 sm:top-6 z-20 w-[calc(100%-2.5rem)] sm:w-[calc(100%-3rem)] max-w-[420px]">
+                    <div className="absolute right-5 top-5 sm:right-6 sm:top-6 z-20">
                       <form
                         onSubmit={(event) => {
                           event.preventDefault();
@@ -778,45 +779,52 @@ export default function Home() {
                         className={cx(
                           "hs-searchPulse",
                           "flex items-center gap-2 rounded-2xl border border-white/15",
-                          "bg-[#0B0B0B]/85 px-3 py-2.5 backdrop-blur",
-                          "shadow-[0_18px_35px_rgba(0,0,0,0.28)]"
+                          "bg-[#0B0B0B]/85 px-3 py-2 backdrop-blur",
+                          "shadow-[0_18px_35px_rgba(0,0,0,0.28)]",
+                          searchFocused ? "w-[240px] sm:w-[300px]" : "w-auto",
+                          "transition-all duration-300"
                         )}
                         title="Search modules and jump"
                       >
-                        <Search size={16} className="shrink-0 text-white/80" />
-                        <input
-                          ref={searchInputRef}
-                          value={searchQuery}
-                          onChange={(event) => setSearchQuery(event.target.value)}
-                          onFocus={() => setSearchFocused(true)}
-                          onBlur={() => {
-                            window.setTimeout(() => setSearchFocused(false), 120);
-                          }}
-                          onKeyDown={(event) => {
-                            if (!searchResults.length) return;
-                            if (event.key === "ArrowDown") {
-                              event.preventDefault();
-                              setSearchActiveIndex((prev) => Math.min(prev + 1, searchResults.length - 1));
-                            }
-                            if (event.key === "ArrowUp") {
-                              event.preventDefault();
-                              setSearchActiveIndex((prev) => Math.max(prev - 1, 0));
-                            }
-                            if (event.key === "Escape") {
-                              setSearchFocused(false);
-                              searchInputRef.current?.blur();
-                            }
-                          }}
-                          placeholder={token ? "Search dashboard, social, AI, marketplace..." : "Search pages..."}
-                          className="w-full bg-transparent text-sm text-white placeholder:text-white/60 outline-none"
-                          aria-label="Search modules"
-                        />
-                        <button
-                          type="submit"
-                          className="rounded-full border border-white/20 px-3 py-1 text-xs font-semibold text-white/90 hover:bg-white/10"
-                        >
-                          Go
-                        </button>
+                        <Search size={14} className="shrink-0 text-white/80" />
+                        {searchFocused ? (
+                          <input
+                            ref={searchInputRef}
+                            value={searchQuery}
+                            onChange={(event) => setSearchQuery(event.target.value)}
+                            onFocus={() => setSearchFocused(true)}
+                            onBlur={() => {
+                              window.setTimeout(() => setSearchFocused(false), 120);
+                            }}
+                            onKeyDown={(event) => {
+                              if (!searchResults.length) return;
+                              if (event.key === "ArrowDown") {
+                                event.preventDefault();
+                                setSearchActiveIndex((prev) => Math.min(prev + 1, searchResults.length - 1));
+                              }
+                              if (event.key === "ArrowUp") {
+                                event.preventDefault();
+                                setSearchActiveIndex((prev) => Math.max(prev - 1, 0));
+                              }
+                              if (event.key === "Escape") {
+                                setSearchFocused(false);
+                                searchInputRef.current?.blur();
+                              }
+                            }}
+                            placeholder="Search pages..."
+                            className="w-full bg-transparent text-xs text-white placeholder:text-white/60 outline-none"
+                            aria-label="Search modules"
+                            autoFocus
+                          />
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setSearchFocused(true)}
+                            className="text-xs text-white/70 whitespace-nowrap"
+                          >
+                            Search
+                          </button>
+                        )}
                       </form>
 
                       {(searchFocused || searchQuery.trim().length > 0) && (
@@ -850,10 +858,6 @@ export default function Home() {
                           )}
                         </div>
                       )}
-                    </div>
-
-                    <div className="absolute left-6 sm:left-8 top-1/2 -translate-y-1/2 text-[180px] sm:text-[210px] font-semibold text-white/12 select-none leading-none tracking-tight">
-                      {searchQuery.trim() ? "SEARCH" : "EXPLORE"}
                     </div>
 
                     <div className="absolute left-6 sm:left-8 bottom-6 sm:bottom-7 z-20">

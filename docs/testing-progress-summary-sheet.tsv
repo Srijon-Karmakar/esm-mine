@@ -1,0 +1,39 @@
+Section	Metric	Value	Notes
+Setup	Main tracker tab name	Tracker	Rename the first pasted sheet to Tracker before using these formulas
+Overview	Total items	=COUNTA(Tracker!A:A)-1	Counts all tracker rows except header
+Overview	Completed	=COUNTIF(Tracker!G:G,"Completed")	Status column G
+Overview	In Progress	=COUNTIF(Tracker!G:G,"In Progress")	Status column G
+Overview	Partial	=COUNTIF(Tracker!G:G,"Partial")	Status column G
+Overview	Not Started	=COUNTIF(Tracker!G:G,"Not Started")	Status column G
+Overview	Percent complete	=IFERROR(COUNTIF(Tracker!G:G,"Completed")/(COUNTA(Tracker!A:A)-1),0)	Format as percent
+Overview	P0 remaining	=COUNTIFS(Tracker!F:F,"P0",Tracker!G:G,"<>Completed")	Priority column F
+Overview	P1 remaining	=COUNTIFS(Tracker!F:F,"P1",Tracker!G:G,"<>Completed")	Priority column F
+Overview	P2 remaining	=COUNTIFS(Tracker!F:F,"P2",Tracker!G:G,"<>Completed")	Priority column F
+Overview	Backend items	=COUNTIF(Tracker!C:C,"API")+COUNTIF(Tracker!C:C,"Backend")	Layer column C
+Overview	Frontend items	=COUNTIF(Tracker!C:C,"UI")+COUNTIF(Tracker!C:C,"Frontend")	Layer column C
+Overview	Full stack items	=COUNTIF(Tracker!C:C,"Full Stack")	Layer column C
+Workstream	Testing Enablement open	=COUNTIFS(Tracker!B:B,"Testing Enablement",Tracker!G:G,"<>Completed")	Workstream column B
+Workstream	Backend Modules open	=COUNTIFS(Tracker!B:B,"Backend Modules",Tracker!G:G,"<>Completed")	Workstream column B
+Workstream	Frontend Flows open	=COUNTIFS(Tracker!B:B,"Frontend Flows",Tracker!G:G,"<>Completed")	Workstream column B
+Workstream	End-to-End Journeys open	=COUNTIFS(Tracker!B:B,"End-to-End Journeys",Tracker!G:G,"<>Completed")	Workstream column B
+Workstream	Release Readiness open	=COUNTIFS(Tracker!B:B,"Release Readiness",Tracker!G:G,"<>Completed")	Workstream column B
+Priority	P0 completed	=COUNTIFS(Tracker!F:F,"P0",Tracker!G:G,"Completed")	Priority column F
+Priority	P1 completed	=COUNTIFS(Tracker!F:F,"P1",Tracker!G:G,"Completed")	Priority column F
+Priority	P2 completed	=COUNTIFS(Tracker!F:F,"P2",Tracker!G:G,"Completed")	Priority column F
+Priority	P0 completion rate	=IFERROR(COUNTIFS(Tracker!F:F,"P0",Tracker!G:G,"Completed")/COUNTIF(Tracker!F:F,"P0"),0)	Format as percent
+Priority	P1 completion rate	=IFERROR(COUNTIFS(Tracker!F:F,"P1",Tracker!G:G,"Completed")/COUNTIF(Tracker!F:F,"P1"),0)	Format as percent
+Priority	P2 completion rate	=IFERROR(COUNTIFS(Tracker!F:F,"P2",Tracker!G:G,"Completed")/COUNTIF(Tracker!F:F,"P2"),0)	Format as percent
+Owners	Unassigned items	=COUNTIFS(Tracker!A2:A,"<>",Tracker!J2:J,"")	Owner column J
+Owners	Assigned items	=COUNTIFS(Tracker!A2:A,"<>",Tracker!J2:J,"<>")	Owner column J
+Dashboard	Top 10 next items	=TEXTJOIN(", ",TRUE,ARRAY_CONSTRAIN(FILTER(Tracker!A2:A&" - "&Tracker!D2:D,Tracker!F2:F="P0",Tracker!G2:G<>"Completed"),10,1))	Shows first 10 unfinished P0 rows
+Owner Summary	Owner	Open Items	P0 Open
+Owner Summary	=IFERROR(INDEX(SORT(UNIQUE(FILTER(Tracker!J2:J,Tracker!J2:J<>""))),ROW(A1)),"")	=IF(B30="","",COUNTIFS(Tracker!J:J,B30,Tracker!G:G,"<>Completed"))	=IF(B30="","",COUNTIFS(Tracker!J:J,B30,Tracker!F:F,"P0",Tracker!G:G,"<>Completed"))
+Owner Summary	=IFERROR(INDEX(SORT(UNIQUE(FILTER(Tracker!J2:J,Tracker!J2:J<>""))),ROW(A2)),"")	=IF(B31="","",COUNTIFS(Tracker!J:J,B31,Tracker!G:G,"<>Completed"))	=IF(B31="","",COUNTIFS(Tracker!J:J,B31,Tracker!F:F,"P0",Tracker!G:G,"<>Completed"))
+Owner Summary	=IFERROR(INDEX(SORT(UNIQUE(FILTER(Tracker!J2:J,Tracker!J2:J<>""))),ROW(A3)),"")	=IF(B32="","",COUNTIFS(Tracker!J:J,B32,Tracker!G:G,"<>Completed"))	=IF(B32="","",COUNTIFS(Tracker!J:J,B32,Tracker!F:F,"P0",Tracker!G:G,"<>Completed"))
+Owner Summary	=IFERROR(INDEX(SORT(UNIQUE(FILTER(Tracker!J2:J,Tracker!J2:J<>""))),ROW(A4)),"")	=IF(B33="","",COUNTIFS(Tracker!J:J,B33,Tracker!G:G,"<>Completed"))	=IF(B33="","",COUNTIFS(Tracker!J:J,B33,Tracker!F:F,"P0",Tracker!G:G,"<>Completed"))
+Owner Summary	=IFERROR(INDEX(SORT(UNIQUE(FILTER(Tracker!J2:J,Tracker!J2:J<>""))),ROW(A5)),"")	=IF(B34="","",COUNTIFS(Tracker!J:J,B34,Tracker!G:G,"<>Completed"))	=IF(B34="","",COUNTIFS(Tracker!J:J,B34,Tracker!F:F,"P0",Tracker!G:G,"<>Completed"))
+Owner Summary	=IFERROR(INDEX(SORT(UNIQUE(FILTER(Tracker!J2:J,Tracker!J2:J<>""))),ROW(A6)),"")	=IF(B35="","",COUNTIFS(Tracker!J:J,B35,Tracker!G:G,"<>Completed"))	=IF(B35="","",COUNTIFS(Tracker!J:J,B35,Tracker!F:F,"P0",Tracker!G:G,"<>Completed"))
+Owner Summary	=IFERROR(INDEX(SORT(UNIQUE(FILTER(Tracker!J2:J,Tracker!J2:J<>""))),ROW(A7)),"")	=IF(B36="","",COUNTIFS(Tracker!J:J,B36,Tracker!G:G,"<>Completed"))	=IF(B36="","",COUNTIFS(Tracker!J:J,B36,Tracker!F:F,"P0",Tracker!G:G,"<>Completed"))
+Owner Summary	=IFERROR(INDEX(SORT(UNIQUE(FILTER(Tracker!J2:J,Tracker!J2:J<>""))),ROW(A8)),"")	=IF(B37="","",COUNTIFS(Tracker!J:J,B37,Tracker!G:G,"<>Completed"))	=IF(B37="","",COUNTIFS(Tracker!J:J,B37,Tracker!F:F,"P0",Tracker!G:G,"<>Completed"))
+Owner Summary	=IFERROR(INDEX(SORT(UNIQUE(FILTER(Tracker!J2:J,Tracker!J2:J<>""))),ROW(A9)),"")	=IF(B38="","",COUNTIFS(Tracker!J:J,B38,Tracker!G:G,"<>Completed"))	=IF(B38="","",COUNTIFS(Tracker!J:J,B38,Tracker!F:F,"P0",Tracker!G:G,"<>Completed"))
+Owner Summary	=IFERROR(INDEX(SORT(UNIQUE(FILTER(Tracker!J2:J,Tracker!J2:J<>""))),ROW(A10)),"")	=IF(B39="","",COUNTIFS(Tracker!J:J,B39,Tracker!G:G,"<>Completed"))	=IF(B39="","",COUNTIFS(Tracker!J:J,B39,Tracker!F:F,"P0",Tracker!G:G,"<>Completed"))

@@ -9,6 +9,9 @@ interface OrbProps {
   backgroundColor?: string;
 }
 
+const MIN_RENDER_DPR = 2;
+const MAX_RENDER_DPR = 3;
+
 const ORB_VERT_SHADER = /* glsl */ `
   precision highp float;
   attribute vec2 position;
@@ -177,7 +180,12 @@ const ORB_FRAG_SHADER = /* glsl */ `
 
   void main() {
     vec2 fragCoord = vUv * iResolution.xy;
-    vec4 col = mainImage(fragCoord);
+    vec4 col =
+      mainImage(fragCoord + vec2(-0.35, -0.35)) +
+      mainImage(fragCoord + vec2(0.35, -0.35)) +
+      mainImage(fragCoord + vec2(-0.35, 0.35)) +
+      mainImage(fragCoord + vec2(0.35, 0.35));
+    col *= 0.25;
     gl_FragColor = vec4(col.rgb * col.a, col.a);
   }
 `;
@@ -196,9 +204,15 @@ export default function Orb({
     if (!container) return;
     const root = container;
 
-    const renderer = new Renderer({ alpha: true, premultipliedAlpha: false });
+    const renderer = new Renderer({
+      alpha: true,
+      premultipliedAlpha: false,
+      antialias: true,
+      powerPreference: "high-performance",
+    });
     const gl = renderer.gl;
     gl.clearColor(0, 0, 0, 0);
+    gl.canvas.style.display = "block";
     root.appendChild(gl.canvas);
 
     const geometry = new Triangle(gl);
@@ -225,7 +239,10 @@ export default function Orb({
     const mesh = new Mesh(gl, { geometry, program });
 
     function resize() {
-      const dpr = window.devicePixelRatio || 1;
+      const dpr = Math.min(
+        Math.max(window.devicePixelRatio || 1, MIN_RENDER_DPR),
+        MAX_RENDER_DPR
+      );
       const width = root.clientWidth;
       const height = root.clientHeight;
       renderer.setSize(width * dpr, height * dpr);

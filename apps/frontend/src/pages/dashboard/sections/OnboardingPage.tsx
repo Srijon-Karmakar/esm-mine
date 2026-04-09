@@ -1,13 +1,13 @@
-﻿import { useEffect, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import {
   acceptMyAssignment,
   createClub,
-  getMe,
   getMyPendingAssignments,
   type MyPendingAssignment,
 } from "../../../api/admin.api";
+import { useMe } from "../../../hooks/useMe";
 import {
   DotTag,
   Hero,
@@ -22,40 +22,50 @@ const cardBg =
   "linear-gradient(145deg, rgba(255,255,255,.70), rgba(255,255,255,.44) 62%, rgba(var(--primary), .12))";
 const glassShadow = adminGlassShadow;
 
+function messageOf(e: unknown, fallback: string) {
+  const err = e as { response?: { data?: { message?: string } }; message?: string };
+  return err?.response?.data?.message || err?.message || fallback;
+}
+
+function membershipsFromMe(me: unknown) {
+  if (!me) return [];
+  if (Array.isArray((me as any)?.memberships)) {
+    return (me as any).memberships;
+  }
+  if (Array.isArray((me as any)?.user?.memberships)) {
+    return (me as any).user.memberships;
+  }
+  return [];
+}
+
 export default function OnboardingPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
-  const [pending, setPending] = useState<MyPendingAssignment[]>([]);
   const [acceptingId, setAcceptingId] = useState<string | null>(null);
-  const [canCreateClub, setCanCreateClub] = useState(false);
   const [clubName, setClubName] = useState("");
   const [clubSlug, setClubSlug] = useState("");
   const [creatingClub, setCreatingClub] = useState(false);
 
-  const load = async () => {
-    setErr(null);
-    setLoading(true);
-    try {
-      const [rows, me] = await Promise.all([getMyPendingAssignments(), getMe()]);
-      setPending(rows || []);
-      const memberships = Array.isArray(me?.memberships)
-        ? me.memberships
-        : Array.isArray((me as any)?.user?.memberships)
-          ? (me as any).user.memberships
-          : [];
-      setCanCreateClub(memberships.length === 0);
-    } catch (e: any) {
-      setErr(e?.response?.data?.message || e?.message || "Unable to load assignments.");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const meQuery = useMe();
+  const pendingQuery = useQuery({
+    queryKey: ["pending-assignments"],
+    queryFn: getMyPendingAssignments,
+    refetchInterval: 5000,
+    refetchIntervalInBackground: true,
+    refetchOnWindowFocus: true,
+    staleTime: 10_000,
+  });
 
-  useEffect(() => {
-    load();
-  }, []);
+  const memberships = useMemo(() => membershipsFromMe(meQuery.data), [meQuery.data]);
+  const canCreateClub = !meQuery.isLoading && memberships.length === 0;
+
+  const pending = pendingQuery.data ?? [];
+  const loading = pendingQuery.isLoading || meQuery.isLoading;
+  const fetchError = pendingQuery.error
+    ? messageOf(pendingQuery.error, "Unable to load assignments.")
+    : null;
+  const displayError = err || fetchError;
 
   const onAccept = async (invitationId: string) => {
     try {
@@ -65,10 +75,11 @@ export default function OnboardingPage() {
       if (acceptedClubId) {
         localStorage.setItem("activeClubId", acceptedClubId);
       }
+      await queryClient.invalidateQueries({ queryKey: ["pending-assignments"] });
       await queryClient.invalidateQueries({ queryKey: ["me"] });
       navigate("/dashboard", { replace: true });
-    } catch (e: any) {
-      setErr(e?.response?.data?.message || e?.message || "Failed to accept assignment.");
+    } catch (e: unknown) {
+      setErr(messageOf(e, "Failed to accept assignment."));
     } finally {
       setAcceptingId(null);
     }
@@ -96,8 +107,8 @@ export default function OnboardingPage() {
         setClubSlug("");
       }
       navigate("/admin", { replace: true });
-    } catch (e: any) {
-      setErr(e?.response?.data?.message || e?.message || "Failed to create club.");
+    } catch (e: unknown) {
+      setErr(messageOf(e, "Failed to create club."));
     } finally {
       setCreatingClub(false);
     }
@@ -125,12 +136,12 @@ export default function OnboardingPage() {
           right={<DotTag>MEMBER</DotTag>}
         />
 
-        {err && (
+        {displayError && (
           <div
             className="rounded-2xl border p-4 text-sm font-semibold text-rose-700"
             style={{ borderColor: cardBorder, background: "rgba(255,255,255,.65)", boxShadow: glassShadow }}
           >
-            {err}
+            {displayError}
           </div>
         )}
 
@@ -184,7 +195,7 @@ export default function OnboardingPage() {
           </Section>
         )}
 
-        {canCreateClub ? (
+        {canCreateClub && (
           <Section title="Create Your Club" subtitle="No memberships found, create your first club workspace.">
             <div
               className="rounded-2xl border p-4 backdrop-blur-xl"
@@ -221,9 +232,8 @@ export default function OnboardingPage() {
               </div>
             </div>
           </Section>
-        ) : null}
+        )}
       </div>
     </PageWrap>
   );
 }
-

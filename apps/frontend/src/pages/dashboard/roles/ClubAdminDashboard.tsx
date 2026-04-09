@@ -9,6 +9,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { useMe } from "../../../hooks/useMe";
 import { useDashboardCharts, useDashboardOverview, useDashboardRecent } from "../../../hooks/useDashboard";
 import {
   DotTag,
@@ -64,10 +65,13 @@ function statusTone(status?: string | null) {
 export default function ClubAdminDashboard() {
   const navigate = useNavigate();
   const [range, setRange] = useState<Range>("30d");
+  const meQuery = useMe();
 
   const overviewQuery = useDashboardOverview("ADMIN");
   const chartsQuery = useDashboardCharts(range, "ADMIN");
   const recentQuery = useDashboardRecent(20, "ADMIN");
+  const meData = (meQuery.data || {}) as { isPlatformAdmin?: boolean };
+  const isPlatformAdmin = !!meData.isPlatformAdmin;
 
   const overview = (overviewQuery.data || {}) as OverviewData;
   const charts = (chartsQuery.data || {}) as ChartsData;
@@ -119,11 +123,15 @@ export default function ClubAdminDashboard() {
   return (
     <PageWrap>
       <Hero
-        title="Club Admin Dashboard"
-        subtitle="Executive club pulse from live metrics. Open full admin workspace for management actions."
+        title={isPlatformAdmin ? "Superadmin Dashboard" : "Club Admin Dashboard"}
+        subtitle={
+          isPlatformAdmin
+            ? "Platform-wide oversight with direct access to admin workspace and live operational signals."
+            : "Executive club pulse from live metrics. Open full admin workspace for management actions."
+        }
         right={
           <div className="flex items-center gap-2">
-            <DotTag>ADMIN</DotTag>
+            <DotTag>{isPlatformAdmin ? "SUPERADMIN" : "ADMIN"}</DotTag>
             <button
               type="button"
               onClick={() => navigate("/admin/matches")}

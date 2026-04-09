@@ -32,6 +32,7 @@ import StatsPage from "./pages/dashboard/sections/StatsPage";
 import MedicalPage from "./pages/dashboard/sections/MedicalPage";
 import MessagesPage from "./pages/dashboard/sections/MessagesPage";
 import SettingsPage from "./pages/dashboard/sections/SettingsPage";
+import ProfilePage from "./pages/dashboard/sections/ProfilePage";
 import OnboardingPage from "./pages/dashboard/sections/OnboardingPage";
 import MarketplaceModulePage from "./pages/marketplace/MarketplaceModulePage";
 import SocialModulePage from "./pages/social/SocialModulePage";
@@ -354,6 +355,14 @@ export default function App() {
             element={
               <DashboardPermissionRoute permission="membership.self.read">
                 <SocialModulePage />
+              </DashboardPermissionRoute>
+            }
+          />
+          <Route
+            path="profile"
+            element={
+              <DashboardPermissionRoute permission="membership.self.read">
+                <ProfilePage />
               </DashboardPermissionRoute>
             }
           />

@@ -528,7 +528,6 @@ import type { SidebarItem, SidebarUser } from "../components/ui/Sidebar";
 import ConfirmModal from "../components/ui/ConfirmModal";
 import type { PrimaryRole, SubRole } from "../api/admin.api";
 
-import { ThemePanel } from "../theme/ThemePanel";
 import { useMe } from "../hooks/useMe";
 import { mapToSidebarUser } from "../utils/mapSidebarUser";
 import { clearAuth, getAccessToken } from "../utils/authStorage";
@@ -540,15 +539,16 @@ import {
 } from "../utils/dashboardRouting";
 import { listRolePermissions, type RolePermission } from "../utils/rolePolicy";
 
-type NavKey =
-  | "dashboard"
-  | "squad"
-  | "training"
-  | "wearables"
-  | "contracts"
-  | "calendar"
-  | "reviews"
-  | "settings";
+ type NavKey =
+   | "dashboard"
+   | "squad"
+   | "training"
+   | "wearables"
+   | "contracts"
+   | "calendar"
+   | "reviews"
+   | "settings"
+   | "profile";
 
 type DashboardRoleKey =
   | "ADMIN"
@@ -576,6 +576,7 @@ const defaultTopNav: { key: NavKey; label: string }[] = [
   { key: "contracts", label: "Contracts" },
   { key: "calendar", label: "Calendar" },
   { key: "reviews", label: "Reviews" },
+  { key: "profile", label: "Profile" },
 ];
 
 const topNavByRole: Partial<Record<DashboardRoleKey, Array<{ key: NavKey; label: string }>>> = {
@@ -584,6 +585,7 @@ const topNavByRole: Partial<Record<DashboardRoleKey, Array<{ key: NavKey; label:
     { key: "training", label: "Training" },
     { key: "calendar", label: "Calendar" },
     { key: "reviews", label: "Reviews" },
+    { key: "profile", label: "Profile" },
   ],
   COACH: [
     { key: "dashboard", label: "Dashboard" },
@@ -591,12 +593,14 @@ const topNavByRole: Partial<Record<DashboardRoleKey, Array<{ key: NavKey; label:
     { key: "training", label: "Training" },
     { key: "calendar", label: "Calendar" },
     { key: "reviews", label: "Reviews" },
+    { key: "profile", label: "Profile" },
   ],
   PHYSIO: [
     { key: "dashboard", label: "Dashboard" },
     { key: "training", label: "Training" },
     { key: "wearables", label: "Wearables" },
     { key: "reviews", label: "Reviews" },
+    { key: "profile", label: "Profile" },
   ],
   AGENT: [
     { key: "dashboard", label: "Dashboard" },
@@ -604,22 +608,26 @@ const topNavByRole: Partial<Record<DashboardRoleKey, Array<{ key: NavKey; label:
     { key: "contracts", label: "Contracts" },
     { key: "calendar", label: "Calendar" },
     { key: "reviews", label: "Reports" },
+    { key: "profile", label: "Profile" },
   ],
   NUTRITIONIST: [
     { key: "dashboard", label: "Dashboard" },
     { key: "training", label: "Training" },
     { key: "wearables", label: "Load" },
     { key: "reviews", label: "Reviews" },
+    { key: "profile", label: "Profile" },
   ],
   PITCH_MANAGER: [
     { key: "dashboard", label: "Dashboard" },
     { key: "training", label: "Prep" },
     { key: "calendar", label: "Fixtures" },
     { key: "settings", label: "Settings" },
+    { key: "profile", label: "Profile" },
   ],
   MEMBER: [
     { key: "dashboard", label: "Dashboard" },
     { key: "settings", label: "Settings" },
+    { key: "profile", label: "Profile" },
   ],
 };
 
@@ -636,6 +644,11 @@ const defaultSectionItems: SidebarItem[] = [
 const MARKETPLACE_SIDEBAR_ITEM: SidebarItem = {
   label: "Marketplace",
   to: "/marketplace",
+};
+
+const PROFILE_SIDEBAR_ITEM: SidebarItem = {
+  label: "Profile",
+  to: "/dashboard/profile",
 };
 
 const sectionItemsByRole: Partial<Record<DashboardRoleKey, SidebarItem[]>> = {
@@ -694,6 +707,21 @@ const sectionItemsByRole: Partial<Record<DashboardRoleKey, SidebarItem[]>> = {
   ],
 };
 
+function ensureProfileItem(items: SidebarItem[]) {
+  if (items.some((item) => item.to === PROFILE_SIDEBAR_ITEM.to)) {
+    return items;
+  }
+  const settingsIndex = items.findIndex((item) => item.to === "/dashboard/settings");
+  if (settingsIndex === -1) {
+    return [...items, PROFILE_SIDEBAR_ITEM];
+  }
+  return [
+    ...items.slice(0, settingsIndex),
+    PROFILE_SIDEBAR_ITEM,
+    ...items.slice(settingsIndex),
+  ];
+}
+
 function cx(...s: Array<string | false | undefined>) {
   return s.filter(Boolean).join(" ");
 }
@@ -705,6 +733,7 @@ function resolveNavKeyFromPath(pathname: string, dashboardHome: string): NavKey 
   if (pathname.startsWith("/dashboard/stats")) return "squad";
   if (pathname.startsWith("/dashboard/medical")) return "wearables";
   if (pathname.startsWith("/dashboard/messages") || pathname.startsWith("/dashboard/social")) return "reviews";
+  if (pathname.startsWith("/dashboard/profile")) return "profile";
   if (pathname.startsWith("/dashboard/settings")) return "settings";
   return "dashboard";
 }
@@ -717,6 +746,7 @@ function iconForSidebarPath(path: string) {
   if (path.includes("/medical")) return <HeartPulse size={14} />;
   if (path.includes("/messages") || path.includes("/social")) return <MessageSquare size={14} />;
   if (path.includes("/members")) return <Users2 size={14} />;
+  if (path.includes("/profile")) return <BadgeCheck size={14} />;
   if (path.includes("/settings")) return <Settings2 size={14} />;
   return <LayoutDashboard size={14} />;
 }
@@ -853,7 +883,6 @@ export default function AppShell() {
   const navigate = useNavigate();
   const { data: meData, isLoading: userLoading, error: meError } = useMe();
 
-  const [themeOpen, setThemeOpen] = useState(false);
   const [active, setActive] = useState<NavKey>("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
@@ -891,6 +920,7 @@ export default function AppShell() {
       calendar: "Matches  -  sessions",
       reviews: "Coach feedback",
       settings: "Preferences",
+      profile: "Profile data",
     };
     return map[active];
   }, [active]);
@@ -954,12 +984,13 @@ export default function AppShell() {
       calendar: "/dashboard/matches",
       reviews: "/dashboard/messages",
       settings: "/dashboard/settings",
+      profile: "/dashboard/profile",
     }),
     [dashboardHome]
   );
 
   const sectionItems = useMemo(() => {
-    const source = sectionItemsByRole[dashboardRole] || defaultSectionItems;
+    const source = ensureProfileItem(sectionItemsByRole[dashboardRole] || defaultSectionItems);
     if (source.some((item) => item.to === MARKETPLACE_SIDEBAR_ITEM.to)) {
       return source;
     }
@@ -1051,8 +1082,6 @@ export default function AppShell() {
 
   return (
     <div className="dashboard-readable min-h-screen w-full bg-[rgb(var(--bg))]">
-      <ThemePanel open={themeOpen} onClose={() => setThemeOpen(false)} />
-
       {/* backdrop under canvas */}
       <div className="relative">
         <GlassBackdrop />
@@ -1241,18 +1270,6 @@ export default function AppShell() {
                           Platform
                         </button>
                       )}
-
-                      <button
-                        onClick={() => setThemeOpen(true)}
-                        className="rounded-full px-4 py-2 text-xs font-semibold shadow-sm transition hover:bg-white/70"
-                        style={{
-                          background: "rgba(255,255,255,0.50)",
-                          color: "rgb(var(--text))",
-                          border: `1px solid ${GLASS_BORDER}`,
-                        }}
-                      >
-                        Theme
-                      </button>
 
                       <div
                         className="grid h-9 w-9 place-items-center rounded-full text-xs font-bold"
