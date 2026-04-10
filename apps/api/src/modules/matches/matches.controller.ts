@@ -86,6 +86,7 @@ import {
   CreateMatchDto,
   UpdateMatchStatusDto,
   SetLineupDto,
+  UpdateMatchSquadDto,
 } from './dto';
 
 @UseGuards(JwtAuthGuard) // Applied to entire controller
@@ -168,8 +169,37 @@ export class MatchesController {
      LINEUPS
   ============================================================ */
 
+  @Patch(':matchId/squad')
   @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @Permissions('matches.write')
+  @Permissions('lineups.write')
+  async updateMatchSquad(
+    @Req() req: any,
+    @Param('clubId') clubId: string,
+    @Param('matchId') matchId: string,
+    @Body() dto: UpdateMatchSquadDto,
+  ) {
+    const match = await this.matches.updateMatchSquad(
+      req.user.sub,
+      clubId,
+      matchId,
+      dto,
+    );
+    return { match };
+  }
+
+  @Get(':matchId/lineup/workspace')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @Permissions('lineups.read')
+  async getLineupWorkspace(
+    @Req() req: any,
+    @Param('clubId') clubId: string,
+    @Param('matchId') matchId: string,
+  ) {
+    return this.matches.getLineupWorkspace(req.user.sub, clubId, matchId);
+  }
+
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @Permissions('lineups.write')
   @Put(':matchId/lineup/home')
   async setHomeLineup(
     @Req() req: any,
@@ -181,7 +211,7 @@ export class MatchesController {
   }
 
   @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @Permissions('matches.write')
+  @Permissions('lineups.write')
   @Put(':matchId/lineup/away')
   async setAwayLineup(
     @Req() req: any,
@@ -194,7 +224,7 @@ export class MatchesController {
 
   @Get(':matchId/lineup')
   @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @Permissions('matches.read')
+  @Permissions('lineups.read')
   async getLineup(
     @Req() req: any,
     @Param('clubId') clubId: string,

@@ -23,6 +23,8 @@ export type RolePermission =
   | "players.read"
   | "squads.read"
   | "squads.write"
+  | "lineups.read"
+  | "lineups.write"
   | "matches.read"
   | "matches.write"
   | "injuries.read"
@@ -36,6 +38,8 @@ export type RolePermission =
   | "stats.read"
   | "stats.recompute"
   | "leaderboards.read"
+  | "schedule.read"
+  | "schedule.write"
   | "marketplace.read"
   | "marketplace.write";
 
@@ -54,6 +58,7 @@ export const PRIMARY_ROLE_PERMISSIONS: Record<PrimaryRole, readonly RolePermissi
     "dashboard.view",
     "seasons.read",
     "opponents.read",
+    "schedule.read",
   ],
   PLAYER: [
     "auth.session.read",
@@ -67,6 +72,7 @@ export const PRIMARY_ROLE_PERMISSIONS: Record<PrimaryRole, readonly RolePermissi
     "operations.read",
     "seasons.read",
     "opponents.read",
+    "schedule.read",
     "stats.read",
     "leaderboards.read",
     "marketplace.read",
@@ -83,6 +89,8 @@ export const PRIMARY_ROLE_PERMISSIONS: Record<PrimaryRole, readonly RolePermissi
     "players.read",
     "squads.read",
     "squads.write",
+    "lineups.read",
+    "lineups.write",
     "matches.read",
     "matches.write",
     "injuries.read",
@@ -98,6 +106,8 @@ export const PRIMARY_ROLE_PERMISSIONS: Record<PrimaryRole, readonly RolePermissi
     "leaderboards.read",
     "marketplace.read",
     "marketplace.write",
+    "schedule.read",
+    "schedule.write",
   ],
   ADMIN: [
     "auth.session.read",
@@ -119,6 +129,8 @@ export const PRIMARY_ROLE_PERMISSIONS: Record<PrimaryRole, readonly RolePermissi
     "players.read",
     "squads.read",
     "squads.write",
+    "lineups.read",
+    "lineups.write",
     "matches.read",
     "matches.write",
     "injuries.read",
@@ -134,6 +146,8 @@ export const PRIMARY_ROLE_PERMISSIONS: Record<PrimaryRole, readonly RolePermissi
     "leaderboards.read",
     "marketplace.read",
     "marketplace.write",
+    "schedule.read",
+    "schedule.write",
   ],
 };
 
@@ -141,7 +155,10 @@ export const SUB_ROLE_PERMISSIONS: Record<SubRole, readonly RolePermission[]> = 
   COACH: [
     "dashboard.view",
     "players.read",
+    "schedule.read",
     "squads.read",
+    "lineups.read",
+    "lineups.write",
     "matches.read",
     "stats.read",
     "leaderboards.read",
@@ -151,6 +168,7 @@ export const SUB_ROLE_PERMISSIONS: Record<SubRole, readonly RolePermission[]> = 
   PHYSIO: [
     "dashboard.view",
     "players.read",
+    "schedule.read",
     "matches.read",
     "injuries.read",
     "stats.read",
@@ -158,6 +176,7 @@ export const SUB_ROLE_PERMISSIONS: Record<SubRole, readonly RolePermission[]> = 
   AGENT: [
     "dashboard.view",
     "players.read",
+    "schedule.read",
     "matches.read",
     "stats.read",
     "leaderboards.read",
@@ -165,16 +184,21 @@ export const SUB_ROLE_PERMISSIONS: Record<SubRole, readonly RolePermission[]> = 
   NUTRITIONIST: [
     "dashboard.view",
     "players.read",
+    "schedule.read",
     "matches.read",
     "injuries.read",
     "stats.read",
   ],
   PITCH_MANAGER: [
     "dashboard.view",
+    "schedule.read",
     "matches.read",
     "operations.read",
   ],
-  CAPTAIN: [],
+  CAPTAIN: [
+    "dashboard.view",
+    "schedule.read",
+  ],
 };
 
 export function listRolePermissions(

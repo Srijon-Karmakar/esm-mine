@@ -23,6 +23,8 @@ export type RolePermission =
   | 'players.read'
   | 'squads.read'
   | 'squads.write'
+  | 'lineups.read'
+  | 'lineups.write'
   | 'matches.read'
   | 'matches.write'
   | 'injuries.read'
@@ -83,6 +85,8 @@ export const PRIMARY_ROLE_PERMISSIONS: Record<PrimaryRole, readonly RolePermissi
     'players.read',
     'squads.read',
     'squads.write',
+    'lineups.read',
+    'lineups.write',
     'matches.read',
     'matches.write',
     'injuries.read',
@@ -119,6 +123,8 @@ export const PRIMARY_ROLE_PERMISSIONS: Record<PrimaryRole, readonly RolePermissi
     'players.read',
     'squads.read',
     'squads.write',
+    'lineups.read',
+    'lineups.write',
     'matches.read',
     'matches.write',
     'injuries.read',
@@ -142,6 +148,8 @@ export const SUB_ROLE_PERMISSIONS: Record<SubRole, readonly RolePermission[]> = 
     'dashboard.view',
     'players.read',
     'squads.read',
+    'lineups.read',
+    'lineups.write',
     'matches.read',
     'stats.read',
     'leaderboards.read',

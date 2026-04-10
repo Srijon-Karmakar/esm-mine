@@ -141,6 +141,31 @@ export type ValidateInvitationResponse = {
   };
 };
 
+export type PlayerAvailabilityStatus = "FIT" | "CAUTION" | "UNAVAILABLE" | "NO_DATA";
+
+export type PlayerInjurySummary = {
+  id?: string;
+  type?: string | null;
+  severity?: string | null;
+  startDate?: string | null;
+  endDate?: string | null;
+  isActive?: boolean;
+};
+
+export type PlayerHealthSummary = {
+  status: PlayerAvailabilityStatus;
+  label: string;
+  note: string;
+  isFitToPlay: boolean;
+  readinessScore?: number | null;
+  wellnessStatus?: "FIT" | "LIMITED" | "UNAVAILABLE" | null;
+  energyLevel?: number | null;
+  sorenessLevel?: number | null;
+  sleepHours?: number | null;
+  lastUpdatedAt?: string | null;
+  activeInjury?: PlayerInjurySummary | null;
+};
+
 export type ClubPlayer = {
   user: {
     id: string;
@@ -156,7 +181,16 @@ export type ClubPlayer = {
     weightKg?: number | null;
     dominantFoot?: "RIGHT" | "LEFT" | "BOTH" | null;
     positions?: string[];
+    wellnessStatus?: "FIT" | "LIMITED" | "UNAVAILABLE" | null;
+    readinessScore?: number | null;
+    energyLevel?: number | null;
+    sorenessLevel?: number | null;
+    sleepHours?: number | null;
+    healthNotes?: string | null;
+    healthUpdatedAt?: string | null;
   } | null;
+  activeInjury?: PlayerInjurySummary | null;
+  health?: PlayerHealthSummary | null;
 };
 
 export type ClubMember = {
@@ -203,6 +237,7 @@ export type MatchItem = {
   id: string;
   clubId: string;
   squadId?: string | null;
+  squad?: SquadSummary | null;
   title?: string | null;
   opponent?: string | null;
   venue?: string | null;
@@ -226,6 +261,70 @@ export type UpdateMatchStatusPayload = {
   status: MatchStatus;
   homeScore?: number;
   awayScore?: number;
+};
+
+export type MatchLineupPlayerPayload = {
+  userId: string;
+  jerseyNo?: number;
+  position?: string;
+};
+
+export type MatchLineupPayload = {
+  formation?: string;
+  captainUserId?: string;
+  starting: MatchLineupPlayerPayload[];
+  bench: MatchLineupPlayerPayload[];
+};
+
+export type MatchLineupPlayerItem = {
+  id?: string;
+  lineupId?: string;
+  userId: string;
+  slot?: "STARTING" | "BENCH";
+  jerseyNo?: number | null;
+  position?: string | null;
+  order?: number;
+  user?: {
+    id: string;
+    email: string;
+    fullName?: string | null;
+  };
+};
+
+export type MatchLineupWorkspacePlayer = {
+  squadMemberId: string;
+  userId: string;
+  user: {
+    id: string;
+    email: string;
+    fullName?: string | null;
+  };
+  jerseyNo?: number | null;
+  position?: string | null;
+  profile?: ClubPlayer["profile"];
+  health: PlayerHealthSummary;
+  activeInjury?: PlayerInjurySummary | null;
+  selectedSlot?: "STARTING" | "BENCH" | null;
+};
+
+export type MatchLineupWorkspace = {
+  match: MatchItem;
+  availableSquads: SquadSummary[];
+  selectedSquad?: SquadSummary | null;
+  availability: {
+    fit: number;
+    caution: number;
+    unavailable: number;
+    noData: number;
+  };
+  lineup: {
+    id?: string | null;
+    formation?: string | null;
+    captainUserId?: string | null;
+    starting: MatchLineupPlayerItem[];
+    bench: MatchLineupPlayerItem[];
+  };
+  roster: MatchLineupWorkspacePlayer[];
 };
 
 export type LeaderboardRow = {
@@ -429,6 +528,32 @@ export async function updateClubMatchStatus(
 ): Promise<MatchItem> {
   const { data } = await http.patch<any>(`/clubs/${clubId}/matches/${matchId}/status`, payload);
   return data?.match ?? data;
+}
+
+export async function updateClubMatchSquad(
+  clubId: string,
+  matchId: string,
+  payload: { squadId?: string | null }
+): Promise<MatchItem> {
+  const { data } = await http.patch<any>(`/clubs/${clubId}/matches/${matchId}/squad`, payload);
+  return data?.match ?? data;
+}
+
+export async function getMatchLineupWorkspace(
+  clubId: string,
+  matchId: string
+): Promise<MatchLineupWorkspace> {
+  const { data } = await http.get<any>(`/clubs/${clubId}/matches/${matchId}/lineup/workspace`);
+  return data;
+}
+
+export async function saveHomeMatchLineup(
+  clubId: string,
+  matchId: string,
+  payload: MatchLineupPayload
+): Promise<any[]> {
+  const { data } = await http.put<any>(`/clubs/${clubId}/matches/${matchId}/lineup/home`, payload);
+  return data;
 }
 
 export async function getLeaderboard(

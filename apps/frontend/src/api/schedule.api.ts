@@ -1,9 +1,12 @@
 import { http } from './http';
 
-export enum ScheduleEventType {
-  Training = 'TRAINING',
-  Match = 'MATCH',
-}
+export const ScheduleEventType = {
+  Training: 'TRAINING',
+  Match: 'MATCH',
+} as const;
+
+export type ScheduleEventType =
+  (typeof ScheduleEventType)[keyof typeof ScheduleEventType];
 
 export type ScheduleTargetGroup =
   | 'Players'

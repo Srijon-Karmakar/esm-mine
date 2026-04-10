@@ -505,8 +505,9 @@
 
 
 // src/layouts/AppShell.tsx
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import { useMutation } from "@tanstack/react-query";
 import {
   Activity,
   BadgeCheck,
@@ -526,9 +527,12 @@ import {
 import Sidebar from "../components/ui/Sidebar";
 import type { SidebarItem, SidebarUser } from "../components/ui/Sidebar";
 import ConfirmModal from "../components/ui/ConfirmModal";
+import { ScheduleEventType, type ScheduleEvent } from "../api/schedule.api";
 import type { PrimaryRole, SubRole } from "../api/admin.api";
 
 import { useMe } from "../hooks/useMe";
+import { useScheduleEvents } from "../hooks/useScheduleEvents";
+import { useNotifications } from "../hooks/useNotifications";
 import { mapToSidebarUser } from "../utils/mapSidebarUser";
 import { clearAuth, getAccessToken } from "../utils/authStorage";
 import {
@@ -538,6 +542,12 @@ import {
   type DashboardRole,
 } from "../utils/dashboardRouting";
 import { listRolePermissions, type RolePermission } from "../utils/rolePolicy";
+import {
+  markNotificationRead,
+  type Notification,
+  type NotificationListResponse,
+} from "../api/notifications.api";
+import { DotTag, formatDateTime, adminCardBorder } from "../pages/admin/admin-ui";
 
  type NavKey =
    | "dashboard"
@@ -633,7 +643,8 @@ const topNavByRole: Partial<Record<DashboardRoleKey, Array<{ key: NavKey; label:
 
 const defaultSectionItems: SidebarItem[] = [
   { label: "Training", to: "/dashboard/training" },
-  { label: "Schedule", to: "/dashboard/matches" },
+  { label: "Matches", to: "/dashboard/matches" },
+  { label: "Scheduling", to: "/dashboard/schedule" },
   { label: "Stats", to: "/dashboard/stats" },
   { label: "Medical", to: "/dashboard/medical" },
   { label: "Messages", to: "/dashboard/messages" },
@@ -651,19 +662,28 @@ const PROFILE_SIDEBAR_ITEM: SidebarItem = {
   to: "/dashboard/profile",
 };
 
+const SQUAD_MANAGEMENT_ITEM: SidebarItem = {
+  label: "Squad Management",
+  to: "/dashboard/squad-management",
+};
+
 const sectionItemsByRole: Partial<Record<DashboardRoleKey, SidebarItem[]>> = {
   PLAYER: defaultSectionItems,
   MANAGER: [
     { label: "Members", to: "/dashboard/members" },
+    SQUAD_MANAGEMENT_ITEM,
     ...defaultSectionItems,
   ],
   ADMIN: [
     { label: "Members", to: "/dashboard/members" },
+    SQUAD_MANAGEMENT_ITEM,
     ...defaultSectionItems,
   ],
   COACH: [
+    SQUAD_MANAGEMENT_ITEM,
     { label: "Training", to: "/dashboard/training" },
-    { label: "Schedule", to: "/dashboard/matches" },
+    { label: "Matches", to: "/dashboard/matches" },
+    { label: "Scheduling", to: "/dashboard/schedule" },
     { label: "Stats", to: "/dashboard/stats" },
     { label: "Messages", to: "/dashboard/messages" },
     { label: "Social", to: "/dashboard/social" },
@@ -672,13 +692,15 @@ const sectionItemsByRole: Partial<Record<DashboardRoleKey, SidebarItem[]>> = {
   PHYSIO: [
     { label: "Medical", to: "/dashboard/medical" },
     { label: "Training", to: "/dashboard/training" },
-    { label: "Schedule", to: "/dashboard/matches" },
+    { label: "Matches", to: "/dashboard/matches" },
+    { label: "Scheduling", to: "/dashboard/schedule" },
     { label: "Messages", to: "/dashboard/messages" },
     { label: "Social", to: "/dashboard/social" },
     { label: "Settings", to: "/dashboard/settings" },
   ],
   AGENT: [
-    { label: "Schedule", to: "/dashboard/matches" },
+    { label: "Matches", to: "/dashboard/matches" },
+    { label: "Scheduling", to: "/dashboard/schedule" },
     { label: "Stats", to: "/dashboard/stats" },
     { label: "Messages", to: "/dashboard/messages" },
     { label: "Social", to: "/dashboard/social" },
@@ -687,13 +709,16 @@ const sectionItemsByRole: Partial<Record<DashboardRoleKey, SidebarItem[]>> = {
   NUTRITIONIST: [
     { label: "Training", to: "/dashboard/training" },
     { label: "Medical", to: "/dashboard/medical" },
+    { label: "Matches", to: "/dashboard/matches" },
+    { label: "Scheduling", to: "/dashboard/schedule" },
     { label: "Stats", to: "/dashboard/stats" },
     { label: "Messages", to: "/dashboard/messages" },
     { label: "Social", to: "/dashboard/social" },
     { label: "Settings", to: "/dashboard/settings" },
   ],
   PITCH_MANAGER: [
-    { label: "Schedule", to: "/dashboard/matches" },
+    { label: "Matches", to: "/dashboard/matches" },
+    { label: "Scheduling", to: "/dashboard/schedule" },
     { label: "Training", to: "/dashboard/training" },
     { label: "Messages", to: "/dashboard/messages" },
     { label: "Social", to: "/dashboard/social" },
@@ -701,6 +726,7 @@ const sectionItemsByRole: Partial<Record<DashboardRoleKey, SidebarItem[]>> = {
   ],
   MEMBER: [
     { label: "Onboarding", to: "/dashboard/onboarding" },
+    { label: "Scheduling", to: "/dashboard/schedule" },
     { label: "Messages", to: "/dashboard/messages" },
     { label: "Social", to: "/dashboard/social" },
     { label: "Settings", to: "/dashboard/settings" },
@@ -729,7 +755,12 @@ function cx(...s: Array<string | false | undefined>) {
 function resolveNavKeyFromPath(pathname: string, dashboardHome: string): NavKey {
   if (pathname === dashboardHome || pathname.startsWith(`${dashboardHome}/`)) return "dashboard";
   if (pathname.startsWith("/dashboard/training")) return "training";
-  if (pathname.startsWith("/dashboard/matches")) return "calendar";
+  if (
+    pathname.startsWith("/dashboard/matches") ||
+    pathname.startsWith("/dashboard/schedule")
+  )
+    return "calendar";
+  if (pathname.startsWith("/dashboard/squad-management")) return "squad";
   if (pathname.startsWith("/dashboard/stats")) return "squad";
   if (pathname.startsWith("/dashboard/medical")) return "wearables";
   if (pathname.startsWith("/dashboard/messages") || pathname.startsWith("/dashboard/social")) return "reviews";
@@ -740,8 +771,10 @@ function resolveNavKeyFromPath(pathname: string, dashboardHome: string): NavKey 
 
 function iconForSidebarPath(path: string) {
   if (path === "/marketplace") return <ShoppingBag size={14} />;
+  if (path.includes("/squad-management")) return <Users2 size={14} />;
   if (path.includes("/training")) return <Dumbbell size={14} />;
-  if (path.includes("/matches")) return <CalendarDays size={14} />;
+  if (path.includes("/schedule") || path.includes("/matches"))
+    return <CalendarDays size={14} />;
   if (path.includes("/stats")) return <Activity size={14} />;
   if (path.includes("/medical")) return <HeartPulse size={14} />;
   if (path.includes("/messages") || path.includes("/social")) return <MessageSquare size={14} />;
@@ -759,6 +792,195 @@ const GLASS_BORDER = "rgba(255,255,255,0.38)";
 const GLASS_BORDER_STRONG = "rgba(255,255,255,0.52)";
 const GLASS_SHADOW = "0 28px 80px rgba(20,24,32,0.10)";
 const GLASS_BG = "rgba(255,255,255,0.52)";
+
+type ScheduleNotificationProps = {
+  events?: ScheduleEvent[];
+  isLoading: boolean;
+  onViewCalendar: () => void;
+};
+
+type NotificationOverviewProps = {
+  data?: NotificationListResponse;
+  isLoading: boolean;
+  onMarkAsRead: (id: string) => void;
+};
+
+function NotificationOverview({
+  data,
+  isLoading,
+  onMarkAsRead,
+}: NotificationOverviewProps) {
+  const notifications = data?.notifications ?? [];
+
+  return (
+    <div
+      className="mb-4 rounded-2xl border px-4 py-3"
+      style={{
+        borderColor: adminCardBorder,
+        background: "linear-gradient(145deg, rgba(255,255,255,.90), rgba(255,255,255,.65))",
+      }}
+    >
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div className="text-[10px] uppercase tracking-[0.3em] text-[rgb(var(--muted))]">
+            Notifications
+          </div>
+          <p className="text-sm font-semibold text-[rgb(var(--text))]">
+            {isLoading
+              ? "Refreshing alerts..."
+              : data?.unreadCount
+              ? `You have ${data.unreadCount} unread alert${data.unreadCount > 1 ? "s" : ""}`
+              : "All caught up"}
+          </p>
+        </div>
+        <div className="text-[11px] text-[rgb(var(--muted))]">{notifications.length} recent</div>
+      </div>
+
+      {isLoading && (
+        <p className="mt-3 text-xs text-[rgb(var(--muted))]">Loading notifications...</p>
+      )}
+
+      {!isLoading && notifications.length > 0 ? (
+        <div className="mt-3 space-y-2">
+          {notifications.slice(0, 3).map((notification: Notification) => (
+            <article
+              key={notification.id}
+              className={cx(
+                "rounded-2xl border px-3 py-3 transition",
+                notification.isRead
+                  ? "bg-white/60 text-[rgb(var(--text))]"
+                  : "border-[rgba(var(--primary),.2)] bg-[rgba(var(--primary),.08)]"
+              )}
+              style={{ borderColor: notification.isRead ? adminCardBorder : "rgba(var(--primary),.2)" }}
+            >
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-[rgb(var(--text))]">
+                    {notification.title}
+                  </p>
+                  <p className="text-[11px] text-[rgb(var(--muted))] truncate">
+                    {notification.body}
+                  </p>
+                  <p className="mt-1 text-[10px] text-[rgb(var(--muted))]">
+                    {new Date(notification.createdAt).toLocaleString()}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onMarkAsRead(notification.id)}
+                  disabled={notification.isRead}
+                  className="rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.3em] transition"
+                  style={{
+                    borderColor: adminCardBorder,
+                    background: notification.isRead ? "rgba(255,255,255,.75)" : "rgb(var(--primary))",
+                    color: notification.isRead ? "rgb(var(--text))" : "rgb(var(--primary-2))",
+                  }}
+                >
+                  {notification.isRead ? "Read" : "Mark read"}
+                </button>
+              </div>
+            </article>
+          ))}
+        </div>
+      ) : null}
+
+      {!isLoading && notifications.length === 0 && (
+        <p className="mt-3 text-sm text-[rgb(var(--muted))]">No notifications yet.</p>
+      )}
+    </div>
+  );
+}
+
+function ScheduleNotification({
+  events,
+  isLoading,
+  onViewCalendar,
+}: ScheduleNotificationProps) {
+  const upcoming = useMemo(() => {
+    if (!events?.length) return [];
+    return events
+      .slice()
+      .filter((event) => new Date(event.eventAt).getTime() >= Date.now() - 1_000)
+      .sort((a, b) => new Date(a.eventAt).getTime() - new Date(b.eventAt).getTime())
+      .slice(0, 2);
+  }, [events]);
+
+  const nextEvent = upcoming[0];
+
+  return (
+    <div
+      className="mb-4 rounded-2xl border px-4 py-3"
+      style={{
+        borderColor: GLASS_BORDER,
+        background: "rgba(255,255,255,.72)",
+      }}
+    >
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-[10px] uppercase tracking-[0.3em] text-[rgb(var(--muted))]">
+            Scheduling
+          </p>
+          <p className="text-sm font-semibold text-[rgb(var(--text))]">
+            {isLoading
+              ? "Refreshing schedule..."
+              : nextEvent
+              ? nextEvent.title
+              : "No upcoming events"}
+          </p>
+          <p className="text-[11px] text-[rgb(var(--muted))]">
+            {isLoading
+              ? "Checking for new schedule items"
+              : nextEvent
+              ? formatDateTime(nextEvent.eventAt)
+              : "Plan a session to notify your crew"}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onViewCalendar}
+          className="rounded-full border px-3 py-1 text-xs font-semibold"
+          style={{
+            borderColor: GLASS_BORDER_STRONG,
+            background: "rgba(255,255,255,.85)",
+          }}
+        >
+          View calendar
+        </button>
+      </div>
+
+      {!isLoading && upcoming.length > 0 && (
+        <div className="mt-3 space-y-2">
+          {upcoming.map((event) => (
+            <article
+              key={event.id}
+              className="flex items-center justify-between gap-3 rounded-2xl border px-3 py-2"
+              style={{
+                borderColor: "rgba(var(--primary-2), .24)",
+                background: "rgba(255,255,255,.65)",
+              }}
+            >
+              <div>
+                <p className="text-sm font-semibold text-[rgb(var(--text))]">{event.title}</p>
+                <p className="text-[11px] text-[rgb(var(--muted))]">
+                  {formatDateTime(event.eventAt)}
+                </p>
+              </div>
+              <DotTag tone={event.type === ScheduleEventType.Match ? "warn" : "ok"}>
+                {event.type}
+              </DotTag>
+            </article>
+          ))}
+        </div>
+      )}
+
+      {!isLoading && !upcoming.length && (
+        <p className="mt-3 text-xs text-[rgb(var(--muted))]">
+          No schedule items yet. Share a session so others can see it here.
+        </p>
+      )}
+    </div>
+  );
+}
 
 function GlassBackdrop() {
   return (
@@ -977,16 +1199,18 @@ export default function AppShell() {
   const topNavTargets = useMemo<Record<NavKey, string>>(
     () => ({
       dashboard: dashboardHome,
-      squad: "/dashboard/stats",
+      squad: ["ADMIN", "MANAGER", "COACH"].includes(dashboardRole)
+        ? "/dashboard/squad-management"
+        : "/dashboard/stats",
       training: "/dashboard/training",
       wearables: "/dashboard/medical",
       contracts: "/dashboard/settings",
-      calendar: "/dashboard/matches",
+      calendar: "/dashboard/schedule",
       reviews: "/dashboard/messages",
       settings: "/dashboard/settings",
       profile: "/dashboard/profile",
     }),
-    [dashboardHome]
+    [dashboardHome, dashboardRole]
   );
 
   const sectionItems = useMemo(() => {
@@ -1046,6 +1270,20 @@ export default function AppShell() {
     };
   }, [meData]);
 
+  const scheduleQuery = useScheduleEvents(activeClubDisplay.clubId || undefined);
+  const notificationsQuery = useNotifications(activeClubDisplay.clubId || undefined);
+  const markReadMutation = useMutation({
+    mutationFn: (id: string) => markNotificationRead(id),
+    onSuccess: () => notificationsQuery.refetch(),
+  });
+  const handleMarkRead = useCallback(
+    (id: string) => {
+      if (markReadMutation.isPending) return;
+      markReadMutation.mutate(id);
+    },
+    [markReadMutation],
+  );
+
   useEffect(() => {
     const next = resolveNavKeyFromPath(location.pathname, dashboardHome);
     if (topNav.some((item) => item.key === next)) {
@@ -1078,6 +1316,10 @@ export default function AppShell() {
     setLogoutConfirmOpen(false);
     clearAuth();
     navigate("/login", { replace: true });
+  };
+
+  const openScheduleCalendar = () => {
+    navigate("/dashboard/schedule");
   };
 
   return (
@@ -1381,6 +1623,21 @@ export default function AppShell() {
                     >
                       Loading profile...
                     </div>
+                  )}
+
+                  {activeClubDisplay.hasClub && (
+                    <>
+                      <NotificationOverview
+                        data={notificationsQuery.data}
+                        isLoading={notificationsQuery.isLoading}
+                        onMarkAsRead={handleMarkRead}
+                      />
+                      <ScheduleNotification
+                        events={scheduleQuery.data}
+                        isLoading={scheduleQuery.isLoading}
+                        onViewCalendar={openScheduleCalendar}
+                      />
+                    </>
                   )}
 
                   <Outlet context={outletContext} />

@@ -9,6 +9,13 @@ export type PlayerProfile = {
   weightKg: number | null;
   dominantFoot: "RIGHT" | "LEFT" | "BOTH" | null;
   positions: string[];
+  wellnessStatus: "FIT" | "LIMITED" | "UNAVAILABLE" | null;
+  readinessScore: number | null;
+  energyLevel: number | null;
+  sorenessLevel: number | null;
+  sleepHours: number | null;
+  healthNotes: string | null;
+  healthUpdatedAt: string | null;
   createdAt: string;
   updatedAt: string;
   user: {
@@ -25,6 +32,12 @@ export type PlayerProfileDto = {
   weightKg?: number | null;
   dominantFoot?: "RIGHT" | "LEFT" | "BOTH" | null;
   positions?: string[];
+  wellnessStatus?: "FIT" | "LIMITED" | "UNAVAILABLE" | null;
+  readinessScore?: number | null;
+  energyLevel?: number | null;
+  sorenessLevel?: number | null;
+  sleepHours?: number | null;
+  healthNotes?: string | null;
 };
 
 export async function getMyPlayerProfile() {

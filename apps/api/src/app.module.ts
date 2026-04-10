@@ -22,6 +22,7 @@ import { MarketplaceModule } from './modules/marketplace/marketplace.module';
 import { SocialModule } from './modules/social/social.module';
 import { AiModule } from './modules/ai/ai.module';
 import { ScheduleModule } from './modules/schedule/schedule.module';
+import { NotificationModule } from './modules/notifications/notification.module';
 
 @Module({
   imports: [
@@ -50,6 +51,7 @@ import { ScheduleModule } from './modules/schedule/schedule.module';
     SocialModule,
     AiModule,
     ScheduleModule,
+    NotificationModule,
   ],
   controllers: [DebugController],
 })

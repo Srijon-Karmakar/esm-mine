@@ -93,6 +93,8 @@ model User {
   socialPosts        SocialPost[]       @relation("SocialPostAuthor")
   socialComments     SocialComment[]    @relation("SocialCommentAuthor")
   socialReactions    SocialReaction[]   @relation("SocialReactionUser")
+  notifications      Notification[]
+  createdScheduleEvents ScheduleEvent[]  @relation("ScheduleEventCreatedBy")
 }
 
 model Club {
@@ -120,6 +122,9 @@ model Club {
 
   matchLineups     MatchLineup[]
   playerMatchStats PlayerMatchStat[]
+
+  scheduleEvents ScheduleEvent[]
+  notifications Notification[]
 
   seasons        Season[]
   opponents      Opponent[]
@@ -297,6 +302,13 @@ model PlayerProfile {
   weightKg     Int?
   dominantFoot String? // "RIGHT" | "LEFT" | "BOTH"
   positions    String[] // ["ST","LW","CAM"] etc (simple, flexible)
+  wellnessStatus String? // "FIT" | "LIMITED" | "UNAVAILABLE"
+  readinessScore Int?
+  energyLevel    Int?
+  sorenessLevel  Int?
+  sleepHours     Float?
+  healthNotes    String?
+  healthUpdatedAt DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -489,11 +501,33 @@ model ScheduleEvent {
   updatedAt       DateTime           @updatedAt
 
   club      Club @relation(fields: [clubId], references: [id])
-  createdBy User @relation(fields: [createdByUserId], references: [id])
+  createdBy User @relation("ScheduleEventCreatedBy", fields: [createdByUserId], references: [id])
+  notifications Notification[]
 
   @@index([clubId])
   @@index([createdByUserId])
   @@index([type])
+}
+
+model Notification {
+  id              String        @id @default(cuid())
+  clubId          String
+  userId          String
+  scheduleEventId String?
+  title           String
+  body            String
+  link            String?
+  isRead          Boolean       @default(false)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  club Club @relation(fields: [clubId], references: [id])
+  user User @relation(fields: [userId], references: [id])
+  scheduleEvent ScheduleEvent? @relation(fields: [scheduleEventId], references: [id])
+
+  @@index([clubId])
+  @@index([userId])
+  @@index([scheduleEventId])
 }
 
 model MatchEvent {

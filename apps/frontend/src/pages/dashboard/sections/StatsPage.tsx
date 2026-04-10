@@ -43,8 +43,6 @@ const HEIGHT_BUCKETS = [
   { label: "180cm+", min: 180, max: Infinity },
 ] as const;
 
-type HeightBucket = (typeof HEIGHT_BUCKETS)[number];
-
 const DOMINANT_FOOT_LABELS: Record<string, string> = {
   RIGHT: "Right",
   LEFT: "Left",
@@ -378,11 +376,12 @@ export default function StatsPage() {
           </div>
         )}
 
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
           <Stat label="Profiled players" value={playerProfiles.length} />
           <Stat label="Avg age" value={avgAge ? `${avgAge} yrs` : "-"} />
           <Stat label="Avg height" value={avgHeight ? `${avgHeight} cm` : "-"} />
           <Stat label="Avg weight" value={avgWeight ? `${avgWeight} kg` : "-"} />
+          <Stat label="Avg BMI" value={avgBmi ? `${avgBmi}` : "-"} />
         </div>
 
         <div className="mt-4 grid gap-4 lg:grid-cols-3">

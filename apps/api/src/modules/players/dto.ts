@@ -2,6 +2,7 @@ import {
   IsArray,
   IsDateString,
   IsInt,
+  IsNumber,
   IsOptional,
   IsString,
   Max,
@@ -37,4 +38,36 @@ export class UpsertPlayerProfileDto {
   @IsArray()
   @IsString({ each: true })
   positions?: string[]; // ["ST","CM"]
+
+  @IsOptional()
+  @IsString()
+  wellnessStatus?: 'FIT' | 'LIMITED' | 'UNAVAILABLE';
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(100)
+  readinessScore?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(10)
+  energyLevel?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(10)
+  sorenessLevel?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(24)
+  sleepHours?: number;
+
+  @IsOptional()
+  @IsString()
+  healthNotes?: string;
 }

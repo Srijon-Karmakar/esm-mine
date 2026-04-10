@@ -473,10 +473,10 @@ export default function Login() {
                 </button>
               </div>
 
-              <div className="anim-item text-xs text-black/50 text-center">
+              {/* <div className="anim-item text-xs text-black/50 text-center">
                 Tip: If you still see 401/403 on <span className="font-mono">/auth/me</span>, your API client must attach{" "}
                 <span className="font-mono">Authorization: Bearer</span>.
-              </div>
+              </div> */}
             </div>
           </div>
         </div>

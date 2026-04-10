@@ -6,6 +6,7 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 import { UpsertPlayerProfileDto } from './dto';
 import { PrimaryRole, SubRole } from '@prisma/client';
+import { buildPlayerHealthSummary } from './player-health';
 
 @Injectable()
 export class PlayersService {
@@ -15,6 +16,23 @@ export class PlayersService {
     if (!userId) throw new BadRequestException('Missing user');
 
     const dob = dto.dob ? new Date(dto.dob) : undefined;
+    const wellnessStatus = dto.wellnessStatus?.trim().toUpperCase();
+    const normalizedWellnessStatus =
+      wellnessStatus === 'FIT' ||
+      wellnessStatus === 'LIMITED' ||
+      wellnessStatus === 'UNAVAILABLE'
+        ? wellnessStatus
+        : dto.wellnessStatus === undefined || dto.wellnessStatus === null
+          ? undefined
+          : null;
+    const healthNotes = dto.healthNotes?.trim();
+    const shouldStampHealthUpdate =
+      normalizedWellnessStatus !== undefined ||
+      dto.readinessScore !== undefined ||
+      dto.energyLevel !== undefined ||
+      dto.sorenessLevel !== undefined ||
+      dto.sleepHours !== undefined ||
+      dto.healthNotes !== undefined;
 
     const profile = await this.prisma.playerProfile.upsert({
       where: { userId },
@@ -25,6 +43,16 @@ export class PlayersService {
         weightKg: dto.weightKg ?? undefined,
         dominantFoot: dto.dominantFoot ?? undefined,
         positions: dto.positions ?? undefined,
+        wellnessStatus: normalizedWellnessStatus,
+        readinessScore: dto.readinessScore ?? undefined,
+        energyLevel: dto.energyLevel ?? undefined,
+        sorenessLevel: dto.sorenessLevel ?? undefined,
+        sleepHours: dto.sleepHours ?? undefined,
+        healthNotes:
+          dto.healthNotes === undefined
+            ? undefined
+            : healthNotes || null,
+        healthUpdatedAt: shouldStampHealthUpdate ? new Date() : undefined,
       },
       create: {
         userId,
@@ -34,6 +62,13 @@ export class PlayersService {
         weightKg: dto.weightKg ?? null,
         dominantFoot: dto.dominantFoot ?? null,
         positions: dto.positions ?? [],
+        wellnessStatus: normalizedWellnessStatus ?? null,
+        readinessScore: dto.readinessScore ?? null,
+        energyLevel: dto.energyLevel ?? null,
+        sorenessLevel: dto.sorenessLevel ?? null,
+        sleepHours: dto.sleepHours ?? null,
+        healthNotes: healthNotes || null,
+        healthUpdatedAt: shouldStampHealthUpdate ? new Date() : null,
       },
       include: { user: { select: { id: true, email: true, fullName: true } } },
     });
@@ -78,8 +113,27 @@ export class PlayersService {
     const profiles = await this.prisma.playerProfile.findMany({
       where: { userId: { in: userIds } },
     });
+    const activeInjuries = await this.prisma.playerInjury.findMany({
+      where: { clubId, userId: { in: userIds }, isActive: true },
+      orderBy: { startDate: 'desc' },
+    });
 
     const profileMap = new Map(profiles.map((p) => [p.userId, p]));
+    const severityRank: Record<string, number> = { HIGH: 3, MEDIUM: 2, LOW: 1 };
+    const injuryMap = new Map<string, (typeof activeInjuries)[number]>();
+    for (const injury of activeInjuries) {
+      const current = injuryMap.get(injury.userId);
+      if (!current) {
+        injuryMap.set(injury.userId, injury);
+        continue;
+      }
+      const nextRank = severityRank[String(injury.severity || '').toUpperCase()] || 0;
+      const currentRank =
+        severityRank[String(current.severity || '').toUpperCase()] || 0;
+      if (nextRank > currentRank) {
+        injuryMap.set(injury.userId, injury);
+      }
+    }
 
     return memberships.map((m) => ({
       user: m.user,
@@ -88,6 +142,11 @@ export class PlayersService {
         ? m.subRoles.includes(SubRole.CAPTAIN)
         : false,
       profile: profileMap.get(m.userId) || null,
+      activeInjury: injuryMap.get(m.userId) || null,
+      health: buildPlayerHealthSummary(
+        profileMap.get(m.userId) || null,
+        injuryMap.get(m.userId) || null,
+      ),
     }));
   }
 }

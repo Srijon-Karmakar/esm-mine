@@ -28,12 +28,14 @@ import DashboardRouter from "./pages/dashboard/DashboardRouter";
 
 import TrainingPage from "./pages/dashboard/sections/TrainingPage";
 import MatchesPage from "./pages/dashboard/sections/MatchesPage";
+import SquadManagementPage from "./pages/dashboard/sections/SquadManagementPage";
 import StatsPage from "./pages/dashboard/sections/StatsPage";
 import MedicalPage from "./pages/dashboard/sections/MedicalPage";
 import MessagesPage from "./pages/dashboard/sections/MessagesPage";
 import SettingsPage from "./pages/dashboard/sections/SettingsPage";
 import ProfilePage from "./pages/dashboard/sections/ProfilePage";
 import OnboardingPage from "./pages/dashboard/sections/OnboardingPage";
+import SchedulePage from "./pages/dashboard/sections/SchedulePage";
 import MarketplaceModulePage from "./pages/marketplace/MarketplaceModulePage";
 import SocialModulePage from "./pages/social/SocialModulePage";
 import AIModulePage from "./pages/ai/AIModulePage";
@@ -323,6 +325,22 @@ export default function App() {
             element={
               <DashboardPermissionRoute permission="matches.read">
                 <MatchesPage />
+              </DashboardPermissionRoute>
+            }
+          />
+          <Route
+            path="schedule"
+            element={
+              <DashboardPermissionRoute permission="schedule.read">
+                <SchedulePage />
+              </DashboardPermissionRoute>
+            }
+          />
+          <Route
+            path="squad-management"
+            element={
+              <DashboardPermissionRoute permission="lineups.read">
+                <SquadManagementPage />
               </DashboardPermissionRoute>
             }
           />
