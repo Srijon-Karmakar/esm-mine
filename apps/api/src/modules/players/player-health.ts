@@ -6,6 +6,7 @@ type ActiveInjuryInput = {
 
 type PlayerHealthProfileInput = {
   wellnessStatus?: string | null;
+  hasInjury?: boolean | null;
   readinessScore?: number | null;
   energyLevel?: number | null;
   sorenessLevel?: number | null;
@@ -21,9 +22,11 @@ export type PlayerAvailabilityStatus =
 
 export type PlayerHealthSummary = {
   status: PlayerAvailabilityStatus;
+  selectionStatus: 'FIT' | 'NOT_FIT';
   label: string;
   note: string;
   isFitToPlay: boolean;
+  selfReportedInjury: boolean;
   readinessScore: number | null;
   wellnessStatus: string | null;
   energyLevel: number | null;
@@ -49,6 +52,7 @@ function hasHealthCheck(profile?: PlayerHealthProfileInput | null) {
   if (!profile) return false;
   return [
     profile.wellnessStatus,
+    profile.hasInjury,
     profile.readinessScore,
     profile.energyLevel,
     profile.sorenessLevel,
@@ -62,6 +66,7 @@ export function buildPlayerHealthSummary(
   activeInjury?: ActiveInjuryInput,
 ): PlayerHealthSummary {
   const wellnessStatus = normalizeWellnessStatus(profile?.wellnessStatus);
+  const selfReportedInjury = !!profile?.hasInjury;
   const readinessScore =
     typeof profile?.readinessScore === 'number' ? profile.readinessScore : null;
   const energyLevel =
@@ -88,11 +93,15 @@ export function buildPlayerHealthSummary(
   ) {
     return {
       status: 'UNAVAILABLE',
+      selectionStatus: 'NOT_FIT',
       label: 'Not fit',
       note: hasInjury
         ? `${activeInjury?.type || 'Active injury'} requires clearance`
+        : selfReportedInjury
+          ? 'Player reported an injury and marked themselves not fit'
         : 'Latest health report marks this player unavailable',
       isFitToPlay: false,
+      selfReportedInjury,
       readinessScore,
       wellnessStatus,
       energyLevel,
@@ -115,11 +124,15 @@ export function buildPlayerHealthSummary(
   ) {
     return {
       status: 'CAUTION',
+      selectionStatus: 'NOT_FIT',
       label: 'Needs review',
       note: hasInjury
         ? `${activeInjury?.type || 'Active injury'} is still active`
+        : selfReportedInjury
+          ? 'Player reported an injury and needs staff review'
         : 'Player reported limited readiness for this fixture',
       isFitToPlay: false,
+      selfReportedInjury,
       readinessScore,
       wellnessStatus,
       energyLevel,
@@ -133,9 +146,11 @@ export function buildPlayerHealthSummary(
   if (!hasCheckIn || staleCheckIn) {
     return {
       status: 'NO_DATA',
+      selectionStatus: 'NOT_FIT',
       label: 'Check-in needed',
       note: 'No fresh health check-in available from the player',
       isFitToPlay: false,
+      selfReportedInjury,
       readinessScore,
       wellnessStatus,
       energyLevel,
@@ -148,9 +163,13 @@ export function buildPlayerHealthSummary(
 
   return {
     status: 'FIT',
+    selectionStatus: 'FIT',
     label: 'Fit to play',
-    note: 'Latest health report looks clear for selection',
+    note: selfReportedInjury
+      ? 'Player marked fit to play but reported an injury for staff awareness'
+      : 'Latest health report looks clear for selection',
     isFitToPlay: true,
+    selfReportedInjury,
     readinessScore,
     wellnessStatus,
     energyLevel,

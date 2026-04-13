@@ -101,13 +101,15 @@ export class MatchesService {
     const uniqueUserIds = new Set(userIds as string[]);
     if (uniqueUserIds.size !== userIds.length) {
       throw new BadRequestException(
-        'A player cannot appear in both starting and bench lists',
+        'An athlete cannot appear in both active and reserve groups',
       );
     }
 
     const captainUserId = dto.captainUserId?.trim() || null;
     if (captainUserId && !uniqueUserIds.has(captainUserId)) {
-      throw new BadRequestException('Captain must be part of the selected lineup');
+      throw new BadRequestException(
+        'The designated team lead must be part of the saved selection',
+      );
     }
 
     return {
@@ -131,7 +133,7 @@ export class MatchesService {
 
     if (!match.squadId) {
       throw new BadRequestException(
-        'Assign a squad to this match before saving the lineup',
+        'Assign a squad to this event before saving participant selection',
       );
     }
 
@@ -148,7 +150,7 @@ export class MatchesService {
     );
     if (invalidUserIds.length) {
       throw new BadRequestException(
-        'Only players assigned to the selected match squad can be in the lineup',
+        'Only athletes assigned to the selected event squad can be saved in the selection',
       );
     }
 

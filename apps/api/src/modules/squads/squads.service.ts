@@ -237,21 +237,27 @@ export class SquadsService {
     });
     if (!squad) throw new NotFoundException('Squad not found');
 
-    try {
-      return await this.prisma.squadMember.create({
-        data: {
-          squadId,
-          userId: dto.userId,
-          jerseyNo: dto.jerseyNo ?? null,
-          position: dto.position?.trim() || null,
-        },
-      });
-    } catch (e: unknown) {
-      if (isUniqueConstraintError(e)) {
-        throw new BadRequestException('User is already in this squad');
-      }
-      throw e;
+    const targetMembership = await this.prisma.membership.findUnique({
+      where: { userId_clubId: { userId: dto.userId, clubId } },
+      select: { userId: true },
+    });
+    if (!targetMembership) {
+      throw new BadRequestException('Only club members can be assigned to a squad');
     }
+
+    return this.prisma.squadMember.upsert({
+      where: { squadId_userId: { squadId, userId: dto.userId } },
+      update: {
+        jerseyNo: dto.jerseyNo ?? null,
+        position: dto.position?.trim() || null,
+      },
+      create: {
+        squadId,
+        userId: dto.userId,
+        jerseyNo: dto.jerseyNo ?? null,
+        position: dto.position?.trim() || null,
+      },
+    });
   }
 
   async removeMember(

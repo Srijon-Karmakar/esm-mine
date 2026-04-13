@@ -18,6 +18,7 @@ import {
   adminCardBorder,
   formatDateTime,
 } from "../../admin/admin-ui";
+import DashboardAnalyticsLab from "../components/DashboardAnalyticsLab";
 
 type Range = "7d" | "30d" | "90d";
 type OverviewData = {
@@ -293,6 +294,7 @@ export default function CoachDashboard() {
         <Stat label={`Assists (${range})`} value={seriesTotal(assistsTrend)} />
         <Stat label={`Appearances (${range})`} value={seriesTotal(matchTrend)} />
       </div>
+      <DashboardAnalyticsLab asRole="COACH" />
     </PageWrap>
   );
 }

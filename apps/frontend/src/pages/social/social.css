@@ -391,6 +391,15 @@
   margin-bottom: 10px;
 }
 
+.social-media--instagram {
+  min-height: unset;
+  background: transparent;
+  border: none;
+  display: flex;
+  justify-content: center;
+  padding: 4px 0;
+}
+
 .social-media img,
 .social-media video {
   width: 100%;

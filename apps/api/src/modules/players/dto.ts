@@ -1,5 +1,6 @@
 import {
   IsArray,
+  IsBoolean,
   IsDateString,
   IsInt,
   IsNumber,
@@ -44,6 +45,10 @@ export class UpsertPlayerProfileDto {
   wellnessStatus?: 'FIT' | 'LIMITED' | 'UNAVAILABLE';
 
   @IsOptional()
+  @IsBoolean()
+  hasInjury?: boolean;
+
+  @IsOptional()
   @IsInt()
   @Min(0)
   @Max(100)
@@ -70,4 +75,65 @@ export class UpsertPlayerProfileDto {
   @IsOptional()
   @IsString()
   healthNotes?: string;
+}
+
+export class UpdateMyPlayerHealthDto {
+  @IsOptional()
+  @IsString()
+  wellnessStatus?: 'FIT' | 'LIMITED' | 'UNAVAILABLE';
+
+  @IsOptional()
+  @IsBoolean()
+  hasInjury?: boolean;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(100)
+  readinessScore?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(10)
+  energyLevel?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(10)
+  sorenessLevel?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(24)
+  sleepHours?: number;
+
+  @IsOptional()
+  @IsString()
+  healthNotes?: string;
+}
+
+export class CreatePlayerTrainingLoadDto {
+  @IsDateString()
+  sessionDate!: string;
+
+  @IsOptional()
+  @IsString()
+  sessionType?: string;
+
+  @IsInt()
+  @Min(1)
+  @Max(600)
+  durationMinutes!: number;
+
+  @IsInt()
+  @Min(1)
+  @Max(10)
+  rpe!: number;
+
+  @IsOptional()
+  @IsString()
+  notes?: string;
 }

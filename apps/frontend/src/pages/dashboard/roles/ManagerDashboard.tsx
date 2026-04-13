@@ -18,6 +18,7 @@ import {
   adminCardBorder,
   formatDateTime,
 } from "../../admin/admin-ui";
+import DashboardAnalyticsLab from "../components/DashboardAnalyticsLab";
 
 type Range = "7d" | "30d" | "90d";
 type OverviewData = {
@@ -298,6 +299,7 @@ export default function ManagerDashboard() {
           )}
         </Section>
       </div>
+      <DashboardAnalyticsLab asRole="MANAGER" />
     </PageWrap>
   );
 }

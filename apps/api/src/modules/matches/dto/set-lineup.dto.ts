@@ -1,5 +1,4 @@
 import {
-  ArrayMaxSize,
   ArrayMinSize,
   IsArray,
   IsInt,
@@ -33,7 +32,6 @@ export class SetLineupDto {
 
   @IsArray()
   @ArrayMinSize(1)
-  @ArrayMaxSize(11)
   @ValidateNested({ each: true })
   @Type(() => LineupPlayerDto)
   starting!: LineupPlayerDto[];

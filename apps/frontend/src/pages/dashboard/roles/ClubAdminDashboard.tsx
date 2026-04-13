@@ -11,6 +11,7 @@ import {
 } from "recharts";
 import { useMe } from "../../../hooks/useMe";
 import { useDashboardCharts, useDashboardOverview, useDashboardRecent } from "../../../hooks/useDashboard";
+import DashboardAnalyticsLab from "../components/DashboardAnalyticsLab";
 import {
   DotTag,
   Hero,
@@ -336,6 +337,7 @@ export default function ClubAdminDashboard() {
           )}
         </Section>
       </div>
+      <DashboardAnalyticsLab asRole="ADMIN" canWrite />
     </PageWrap>
   );
 }

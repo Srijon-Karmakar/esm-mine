@@ -44,13 +44,13 @@ export type MeMembership = {
   club: Club;
 };
 
-export type MeResponse = { 
-  user: MeUser; 
-  memberships?: MeMembership[]; 
-  activeClubId?: string | null; 
-  activeMembership?: MeMembership | null; 
+export type MeResponse = {
+  user: MeUser;
+  memberships?: MeMembership[];
+  activeClubId?: string | null;
+  activeMembership?: MeMembership | null;
   isPlatformAdmin?: boolean;
-}; 
+};
 
 export type PlatformOverview = {
   totals: {
@@ -141,7 +141,11 @@ export type ValidateInvitationResponse = {
   };
 };
 
-export type PlayerAvailabilityStatus = "FIT" | "CAUTION" | "UNAVAILABLE" | "NO_DATA";
+export type PlayerAvailabilityStatus =
+  | "FIT"
+  | "CAUTION"
+  | "UNAVAILABLE"
+  | "NO_DATA";
 
 export type PlayerInjurySummary = {
   id?: string;
@@ -154,9 +158,11 @@ export type PlayerInjurySummary = {
 
 export type PlayerHealthSummary = {
   status: PlayerAvailabilityStatus;
+  selectionStatus: "FIT" | "NOT_FIT";
   label: string;
   note: string;
   isFitToPlay: boolean;
+  selfReportedInjury: boolean;
   readinessScore?: number | null;
   wellnessStatus?: "FIT" | "LIMITED" | "UNAVAILABLE" | null;
   energyLevel?: number | null;
@@ -182,6 +188,7 @@ export type ClubPlayer = {
     dominantFoot?: "RIGHT" | "LEFT" | "BOTH" | null;
     positions?: string[];
     wellnessStatus?: "FIT" | "LIMITED" | "UNAVAILABLE" | null;
+    hasInjury?: boolean | null;
     readinessScore?: number | null;
     energyLevel?: number | null;
     sorenessLevel?: number | null;
@@ -191,6 +198,56 @@ export type ClubPlayer = {
   } | null;
   activeInjury?: PlayerInjurySummary | null;
   health?: PlayerHealthSummary | null;
+};
+
+export type UpdateClubPlayerProfilePayload = {
+  dob?: string | null;
+  nationality?: string | null;
+  heightCm?: number | null;
+  weightKg?: number | null;
+  dominantFoot?: "RIGHT" | "LEFT" | "BOTH" | null;
+  positions?: string[];
+  wellnessStatus?: "FIT" | "LIMITED" | "UNAVAILABLE" | null;
+  hasInjury?: boolean | null;
+  readinessScore?: number | null;
+  energyLevel?: number | null;
+  sorenessLevel?: number | null;
+  sleepHours?: number | null;
+  healthNotes?: string | null;
+};
+
+export type ClubInjury = {
+  id: string;
+  clubId: string;
+  userId: string;
+  type: string;
+  severity?: string | null;
+  description?: string | null;
+  startDate?: string | null;
+  endDate?: string | null;
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type ClubPlayerTrainingLoadEntry = {
+  id: string;
+  clubId: string;
+  userId: string;
+  createdByUserId: string;
+  sessionDate: string;
+  sessionType?: string | null;
+  durationMinutes: number;
+  rpe: number;
+  loadScore: number;
+  notes?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  createdBy?: {
+    id: string;
+    email: string;
+    fullName?: string | null;
+  } | null;
 };
 
 export type ClubMember = {
@@ -381,15 +438,15 @@ export type PendingSignupsPage = {
   };
 };
 
-export type MyPendingAssignment = { 
-  invitationId: string; 
-  clubId: string; 
+export type MyPendingAssignment = {
+  invitationId: string;
+  clubId: string;
   club: Club;
   primary: PrimaryRole;
   subRoles: SubRole[];
   createdAt: string;
-  expiresAt: string; 
-}; 
+  expiresAt: string;
+};
 
 export type AcceptMyAssignmentResponse = {
   ok: boolean;
@@ -416,14 +473,14 @@ export async function getMe(): Promise<MeResponse> {
     memberships[0] ??
     null;
 
-  return { 
-    user, 
-    memberships, 
-    activeClubId: activeClubId ?? activeMembership?.clubId ?? null, 
-    activeMembership, 
+  return {
+    user,
+    memberships,
+    activeClubId: activeClubId ?? activeMembership?.clubId ?? null,
+    activeMembership,
     isPlatformAdmin: !!data?.isPlatformAdmin,
-  }; 
-} 
+  };
+}
 
 export async function getMyClubs(): Promise<Club[]> {
   const { data } = await http.get<any>("/clubs/my");
@@ -446,7 +503,7 @@ export async function getClubTheme(clubId: string): Promise<ClubTheme> {
 
 export async function updateClubTheme(
   clubId: string,
-  payload: Partial<Pick<ClubTheme, "primary" | "deep">>
+  payload: Partial<Pick<ClubTheme, "primary" | "deep">>,
 ): Promise<ClubTheme> {
   const { data } = await http.patch<any>(`/clubs/${clubId}/theme`, payload);
   return data?.theme;
@@ -457,6 +514,74 @@ export async function getClubPlayers(clubId: string): Promise<ClubPlayer[]> {
   return data?.players ?? data ?? [];
 }
 
+export async function updateClubPlayerProfile(
+  clubId: string,
+  userId: string,
+  payload: UpdateClubPlayerProfilePayload,
+) {
+  const { data } = await http.patch<any>(
+    `/clubs/${clubId}/players/${userId}/profile`,
+    payload,
+  );
+  return data?.profile;
+}
+
+export async function getClubInjuries(
+  clubId: string,
+  query?: { userId?: string; active?: boolean },
+): Promise<ClubInjury[]> {
+  const { data } = await http.get<any>(`/clubs/${clubId}/injuries`, {
+    params: query,
+  });
+  return data ?? [];
+}
+
+export async function createClubInjury(
+  clubId: string,
+  payload: {
+    userId: string;
+    type: string;
+    severity?: string;
+    description?: string;
+    startDate?: string;
+    endDate?: string;
+    isActive?: boolean;
+  },
+): Promise<ClubInjury> {
+  const { data } = await http.post<any>(`/clubs/${clubId}/injuries`, payload);
+  return data;
+}
+
+export async function getClubPlayerTrainingLoads(
+  clubId: string,
+  userId: string,
+  range = "30d",
+): Promise<ClubPlayerTrainingLoadEntry[]> {
+  const { data } = await http.get<any>(
+    `/clubs/${clubId}/players/${userId}/training-loads`,
+    { params: { range } },
+  );
+  return data?.entries ?? data ?? [];
+}
+
+export async function createClubPlayerTrainingLoad(
+  clubId: string,
+  userId: string,
+  payload: {
+    sessionDate: string;
+    sessionType?: string | null;
+    durationMinutes: number;
+    rpe: number;
+    notes?: string | null;
+  },
+): Promise<ClubPlayerTrainingLoadEntry> {
+  const { data } = await http.post<any>(
+    `/clubs/${clubId}/players/${userId}/training-loads`,
+    payload,
+  );
+  return data?.entry ?? data;
+}
+
 export async function getClubMembers(clubId: string): Promise<ClubMember[]> {
   const { data } = await http.get<any>(`/clubs/${clubId}/members`);
   return data?.members ?? [];
@@ -465,9 +590,12 @@ export async function getClubMembers(clubId: string): Promise<ClubMember[]> {
 export async function updateClubMemberRole(
   clubId: string,
   userId: string,
-  payload: { primary?: PrimaryRole; subRoles?: SubRole[] }
+  payload: { primary?: PrimaryRole; subRoles?: SubRole[] },
 ) {
-  const { data } = await http.patch(`/clubs/${clubId}/members/${userId}`, payload);
+  const { data } = await http.patch(
+    `/clubs/${clubId}/members/${userId}`,
+    payload,
+  );
   return data?.member;
 }
 
@@ -481,12 +609,18 @@ export async function getClubSquads(clubId: string): Promise<SquadSummary[]> {
   return data?.squads ?? data ?? [];
 }
 
-export async function getSquad(clubId: string, squadId: string): Promise<SquadDetail> {
+export async function getSquad(
+  clubId: string,
+  squadId: string,
+): Promise<SquadDetail> {
   const { data } = await http.get<any>(`/clubs/${clubId}/squads/${squadId}`);
   return data?.squad ?? data;
 }
 
-export async function createSquad(clubId: string, payload: CreateSquadPayload): Promise<SquadSummary> {
+export async function createSquad(
+  clubId: string,
+  payload: CreateSquadPayload,
+): Promise<SquadSummary> {
   const { data } = await http.post<any>(`/clubs/${clubId}/squads`, payload);
   return data?.squad ?? data;
 }
@@ -494,19 +628,22 @@ export async function createSquad(clubId: string, payload: CreateSquadPayload): 
 export async function addSquadMember(
   clubId: string,
   squadId: string,
-  payload: { userId: string; jerseyNo?: number; position?: string }
+  payload: { userId: string; jerseyNo?: number; position?: string },
 ): Promise<SquadMember> {
-  const { data } = await http.post<any>(`/clubs/${clubId}/squads/${squadId}/members`, payload);
+  const { data } = await http.post<any>(
+    `/clubs/${clubId}/squads/${squadId}/members`,
+    payload,
+  );
   return data?.member ?? data;
 }
 
 export async function removeSquadMember(
   clubId: string,
   squadId: string,
-  userId: string
+  userId: string,
 ): Promise<{ ok: boolean }> {
   const { data } = await http.delete<{ ok: boolean }>(
-    `/clubs/${clubId}/squads/${squadId}/members/${userId}`
+    `/clubs/${clubId}/squads/${squadId}/members/${userId}`,
   );
   return data;
 }
@@ -516,7 +653,10 @@ export async function getClubMatches(clubId: string): Promise<MatchItem[]> {
   return data?.matches ?? data ?? [];
 }
 
-export async function createClubMatch(clubId: string, payload: CreateMatchPayload): Promise<MatchItem> {
+export async function createClubMatch(
+  clubId: string,
+  payload: CreateMatchPayload,
+): Promise<MatchItem> {
   const { data } = await http.post<any>(`/clubs/${clubId}/matches`, payload);
   return data?.match ?? data;
 }
@@ -524,61 +664,80 @@ export async function createClubMatch(clubId: string, payload: CreateMatchPayloa
 export async function updateClubMatchStatus(
   clubId: string,
   matchId: string,
-  payload: UpdateMatchStatusPayload
+  payload: UpdateMatchStatusPayload,
 ): Promise<MatchItem> {
-  const { data } = await http.patch<any>(`/clubs/${clubId}/matches/${matchId}/status`, payload);
+  const { data } = await http.patch<any>(
+    `/clubs/${clubId}/matches/${matchId}/status`,
+    payload,
+  );
   return data?.match ?? data;
 }
 
 export async function updateClubMatchSquad(
   clubId: string,
   matchId: string,
-  payload: { squadId?: string | null }
+  payload: { squadId?: string | null },
 ): Promise<MatchItem> {
-  const { data } = await http.patch<any>(`/clubs/${clubId}/matches/${matchId}/squad`, payload);
+  const { data } = await http.patch<any>(
+    `/clubs/${clubId}/matches/${matchId}/squad`,
+    payload,
+  );
   return data?.match ?? data;
 }
 
 export async function getMatchLineupWorkspace(
   clubId: string,
-  matchId: string
+  matchId: string,
 ): Promise<MatchLineupWorkspace> {
-  const { data } = await http.get<any>(`/clubs/${clubId}/matches/${matchId}/lineup/workspace`);
+  const { data } = await http.get<any>(
+    `/clubs/${clubId}/matches/${matchId}/lineup/workspace`,
+  );
   return data;
 }
 
 export async function saveHomeMatchLineup(
   clubId: string,
   matchId: string,
-  payload: MatchLineupPayload
+  payload: MatchLineupPayload,
 ): Promise<any[]> {
-  const { data } = await http.put<any>(`/clubs/${clubId}/matches/${matchId}/lineup/home`, payload);
+  const { data } = await http.put<any>(
+    `/clubs/${clubId}/matches/${matchId}/lineup/home`,
+    payload,
+  );
   return data;
 }
 
 export async function getLeaderboard(
   clubId: string,
   metric: LeaderboardMetric = "goals",
-  limit = 10
+  limit = 10,
 ): Promise<LeaderboardRow[]> {
   const { data } = await http.get<any>(
-    `/clubs/${clubId}/stats/leaderboard?metric=${metric}&limit=${limit}`
+    `/clubs/${clubId}/stats/leaderboard?metric=${metric}&limit=${limit}`,
   );
   return data?.leaderboard ?? data ?? [];
 }
 
 export async function inviteMember(
   clubId: string,
-  payload: InviteMemberPayload
+  payload: InviteMemberPayload,
 ): Promise<InviteMemberResponse> {
-  const { data } = await http.post<InviteMemberResponse>(`/clubs/${clubId}/invite`, payload);
+  const { data } = await http.post<InviteMemberResponse>(
+    `/clubs/${clubId}/invite`,
+    payload,
+  );
   return data;
 }
 
-export async function validateInvitation(token: string): Promise<ValidateInvitationResponse> {
-  const { data } = await http.get<ValidateInvitationResponse>("/invitations/validate", {
-    params: { token },
-  });
+export async function validateInvitation(
+  token: string,
+): Promise<ValidateInvitationResponse> {
+  const { data } = await http.get<ValidateInvitationResponse>(
+    "/invitations/validate",
+    {
+      params: { token },
+    },
+  );
   return data;
 }
 
@@ -593,7 +752,7 @@ export async function acceptInvitation(payload: {
 
 export async function getPendingSignups(
   clubId: string,
-  query?: PendingSignupsQuery
+  query?: PendingSignupsQuery,
 ): Promise<PendingSignupsPage> {
   const { data } = await http.get(`/clubs/${clubId}/signups/pending`, {
     params: query,
@@ -606,7 +765,9 @@ export async function getPendingSignups(
       total: Number(data?.pagination?.total || 0),
       totalPages: Number(data?.pagination?.totalPages || 0),
       hasNext: Boolean(data?.pagination?.hasNext),
-      scope: (data?.pagination?.scope || query?.scope || "CLUB") as PendingSignupsScope,
+      scope: (data?.pagination?.scope ||
+        query?.scope ||
+        "CLUB") as PendingSignupsScope,
       q: String(data?.pagination?.q || query?.q || ""),
     },
   };
@@ -614,24 +775,29 @@ export async function getPendingSignups(
 
 export async function assignSignupToClub(
   clubId: string,
-  payload: { userId: string; primary: PrimaryRole; subRoles?: SubRole[] }
+  payload: { userId: string; primary: PrimaryRole; subRoles?: SubRole[] },
 ) {
   const { data } = await http.post(`/clubs/${clubId}/signups/assign`, payload);
   return data?.assignment;
 }
 
-export async function getMyPendingAssignments(): Promise<MyPendingAssignment[]> {
+export async function getMyPendingAssignments(): Promise<
+  MyPendingAssignment[]
+> {
   const { data } = await http.get("/invitations/my-pending");
   return data ?? [];
 }
 
 export async function acceptMyAssignment(
-  invitationId: string
+  invitationId: string,
 ): Promise<AcceptMyAssignmentResponse> {
-  const { data } = await http.post<AcceptMyAssignmentResponse>("/invitations/accept-assignment", {
-    invitationId, 
-  }); 
-  return data; 
+  const { data } = await http.post<AcceptMyAssignmentResponse>(
+    "/invitations/accept-assignment",
+    {
+      invitationId,
+    },
+  );
+  return data;
 }
 
 export async function getPlatformOverview(): Promise<PlatformOverview> {
@@ -659,27 +825,32 @@ export async function updatePlatformClub(
       | "subscriptionStartAt"
       | "subscriptionNextBillingAt"
     >
-  >
+  >,
 ) {
-  const { data } = await http.patch<{ club: PlatformClub }>(`/platform/clubs/${clubId}`, payload);
+  const { data } = await http.patch<{ club: PlatformClub }>(
+    `/platform/clubs/${clubId}`,
+    payload,
+  );
   return data?.club;
 }
 
 export async function getPlatformRoleMatrix(
-  clubId: string
+  clubId: string,
 ): Promise<PlatformRoleMatrixResponse> {
-  const { data } = await http.get<PlatformRoleMatrixResponse>(`/platform/clubs/${clubId}/roles`);
+  const { data } = await http.get<PlatformRoleMatrixResponse>(
+    `/platform/clubs/${clubId}/roles`,
+  );
   return data;
 }
 
 export async function updatePlatformRoleSetting(
   clubId: string,
   roleKey: string,
-  isEnabled: boolean
+  isEnabled: boolean,
 ): Promise<PlatformRoleMatrixResponse> {
   const { data } = await http.patch<PlatformRoleMatrixResponse>(
     `/platform/clubs/${clubId}/roles/${roleKey}`,
-    { isEnabled }
+    { isEnabled },
   );
   return data;
 }
@@ -691,11 +862,11 @@ export async function getPlatformUsers(): Promise<PlatformUser[]> {
 
 export async function updatePlatformUserAdmin(
   userId: string,
-  isPlatformAdmin: boolean
+  isPlatformAdmin: boolean,
 ) {
   const { data } = await http.patch<{ user: PlatformUser }>(
     `/platform/users/${userId}/platform-admin`,
-    { isPlatformAdmin }
+    { isPlatformAdmin },
   );
   return data?.user;
 }

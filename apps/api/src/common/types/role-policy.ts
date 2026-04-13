@@ -10,6 +10,7 @@ export type RolePermission =
   | 'membership.accept.assignment'
   | 'dashboard.view'
   | 'dashboard.switch.context'
+  | 'analytics.write'
   | 'clubs.read'
   | 'clubs.create'
   | 'members.read'
@@ -21,6 +22,7 @@ export type RolePermission =
   | 'invitations.revoke'
   | 'invitations.resend'
   | 'players.read'
+  | 'players.write'
   | 'squads.read'
   | 'squads.write'
   | 'lineups.read'
@@ -46,7 +48,10 @@ export const MULTI_ROLE_SWITCH_PRIMARY_ALLOWLIST: readonly PrimaryRole[] = [
   PrimaryRole.MANAGER,
 ];
 
-export const PRIMARY_ROLE_PERMISSIONS: Record<PrimaryRole, readonly RolePermission[]> = {
+export const PRIMARY_ROLE_PERMISSIONS: Record<
+  PrimaryRole,
+  readonly RolePermission[]
+> = {
   [PrimaryRole.MEMBER]: [
     'auth.session.read',
     'profile.self.read',
@@ -84,24 +89,15 @@ export const PRIMARY_ROLE_PERMISSIONS: Record<PrimaryRole, readonly RolePermissi
     'members.read',
     'players.read',
     'squads.read',
-    'squads.write',
     'lineups.read',
-    'lineups.write',
     'matches.read',
-    'matches.write',
     'injuries.read',
-    'injuries.write',
     'operations.read',
-    'operations.write',
     'seasons.read',
-    'seasons.write',
     'opponents.read',
-    'opponents.write',
     'stats.read',
-    'stats.recompute',
     'leaderboards.read',
     'marketplace.read',
-    'marketplace.write',
   ],
   [PrimaryRole.ADMIN]: [
     'auth.session.read',
@@ -110,6 +106,7 @@ export const PRIMARY_ROLE_PERMISSIONS: Record<PrimaryRole, readonly RolePermissi
     'membership.self.read',
     'dashboard.view',
     'dashboard.switch.context',
+    'analytics.write',
     'clubs.read',
     'clubs.create',
     'members.read',
@@ -121,6 +118,7 @@ export const PRIMARY_ROLE_PERMISSIONS: Record<PrimaryRole, readonly RolePermissi
     'invitations.revoke',
     'invitations.resend',
     'players.read',
+    'players.write',
     'squads.read',
     'squads.write',
     'lineups.read',
@@ -143,47 +141,46 @@ export const PRIMARY_ROLE_PERMISSIONS: Record<PrimaryRole, readonly RolePermissi
   ],
 };
 
-export const SUB_ROLE_PERMISSIONS: Record<SubRole, readonly RolePermission[]> = {
-  [SubRole.COACH]: [
-    'dashboard.view',
-    'players.read',
-    'squads.read',
-    'lineups.read',
-    'lineups.write',
-    'matches.read',
-    'stats.read',
-    'leaderboards.read',
-    'marketplace.read',
-    'marketplace.write',
-  ],
-  [SubRole.PHYSIO]: [
-    'dashboard.view',
-    'players.read',
-    'matches.read',
-    'injuries.read',
-    'stats.read',
-  ],
-  [SubRole.AGENT]: [
-    'dashboard.view',
-    'players.read',
-    'matches.read',
-    'stats.read',
-    'leaderboards.read',
-  ],
-  [SubRole.NUTRITIONIST]: [
-    'dashboard.view',
-    'players.read',
-    'matches.read',
-    'injuries.read',
-    'stats.read',
-  ],
-  [SubRole.PITCH_MANAGER]: [
-    'dashboard.view',
-    'matches.read',
-    'operations.read',
-  ],
-  [SubRole.CAPTAIN]: [],
-};
+export const SUB_ROLE_PERMISSIONS: Record<SubRole, readonly RolePermission[]> =
+  {
+    [SubRole.COACH]: [
+      'dashboard.view',
+      'players.read',
+      'squads.read',
+      'lineups.read',
+      'matches.read',
+      'stats.read',
+      'leaderboards.read',
+      'marketplace.read',
+    ],
+    [SubRole.PHYSIO]: [
+      'dashboard.view',
+      'players.read',
+      'matches.read',
+      'injuries.read',
+      'stats.read',
+    ],
+    [SubRole.AGENT]: [
+      'dashboard.view',
+      'players.read',
+      'matches.read',
+      'stats.read',
+      'leaderboards.read',
+    ],
+    [SubRole.NUTRITIONIST]: [
+      'dashboard.view',
+      'players.read',
+      'matches.read',
+      'injuries.read',
+      'stats.read',
+    ],
+    [SubRole.PITCH_MANAGER]: [
+      'dashboard.view',
+      'matches.read',
+      'operations.read',
+    ],
+    [SubRole.CAPTAIN]: [],
+  };
 
 export type RoleAccessShape = {
   primary: PrimaryRole;

@@ -389,6 +389,14 @@ export default function Home() {
     setSearchActiveIndex(0);
   }, [searchQuery]);
 
+  useEffect(() => {
+    if (!searchFocused) return;
+    const frame = window.requestAnimationFrame(() => {
+      searchInputRef.current?.focus();
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [searchFocused]);
+
   const resolveSearchPath = (path: string) => {
     if (path === "/dashboard") return dashboardEntry;
     return path;
@@ -704,8 +712,8 @@ export default function Home() {
                       </p>
                     </div>
 
-                    <div className="mt-8 sm:mt-10 flex flex-wrap gap-3">
-                      {token ? (
+                    {token ? (
+                      <div className="mt-8 sm:mt-10 flex flex-wrap gap-3">
                         <button
                           onClick={() => navigate(dashboardEntry)}
                           className={cx(
@@ -717,33 +725,8 @@ export default function Home() {
                         >
                           Open Dashboard
                         </button>
-                      ) : (
-                        <>
-                          {/* <button
-                            onClick={() => navigate("/register")}
-                            className={cx(
-                              "rounded-full bg-[#E7E9FF] text-[#5F5EA6] font-semibold",
-                              "px-6 sm:px-8 py-3 text-sm",
-                              "tracking-wide",
-                              neuBtn
-                            )}
-                          >
-                            Get Started
-                          </button> */}
-                          <button
-                            onClick={() => navigate("/login")}
-                            className={cx(
-                              "rounded-full bg-white/10 border border-white/15 backdrop-blur text-white font-semibold",
-                              "px-6 sm:px-8 py-3 text-sm",
-                              "tracking-wide",
-                              "transition-all duration-300 hover:bg-white/15 active:scale-[0.98]"
-                            )}
-                          >
-                            Login
-                          </button>
-                        </>
-                      )}
-                    </div>
+                      </div>
+                    ) : null}
                   </div>
 
                  
@@ -770,94 +753,110 @@ export default function Home() {
                       "shadow-[0_22px_50px_rgba(95,94,166,0.28)]"
                     )}
                   >
-                    <div className="absolute right-5 top-5 sm:right-6 sm:top-6 z-20">
-                      <form
-                        onSubmit={(event) => {
-                          event.preventDefault();
-                          onSearchSubmit();
-                        }}
-                        className={cx(
-                          "hs-searchPulse",
-                          "flex items-center gap-2 rounded-2xl border border-white/15",
-                          "bg-[#0B0B0B]/85 px-3 py-2 backdrop-blur",
-                          "shadow-[0_18px_35px_rgba(0,0,0,0.28)]",
-                          searchFocused ? "w-[240px] sm:w-[300px]" : "w-auto",
-                          "transition-all duration-300"
-                        )}
-                        title="Search modules and jump"
-                      >
-                        <Search size={14} className="shrink-0 text-white/80" />
+                    <div className="absolute right-5 top-5 sm:right-6 sm:top-6 z-20 flex items-start gap-2">
+                      <div className="relative">
                         {searchFocused ? (
-                          <input
-                            ref={searchInputRef}
-                            value={searchQuery}
-                            onChange={(event) => setSearchQuery(event.target.value)}
-                            onFocus={() => setSearchFocused(true)}
-                            onBlur={() => {
-                              window.setTimeout(() => setSearchFocused(false), 120);
+                          <form
+                            onSubmit={(event) => {
+                              event.preventDefault();
+                              onSearchSubmit();
                             }}
-                            onKeyDown={(event) => {
-                              if (!searchResults.length) return;
-                              if (event.key === "ArrowDown") {
-                                event.preventDefault();
-                                setSearchActiveIndex((prev) => Math.min(prev + 1, searchResults.length - 1));
-                              }
-                              if (event.key === "ArrowUp") {
-                                event.preventDefault();
-                                setSearchActiveIndex((prev) => Math.max(prev - 1, 0));
-                              }
-                              if (event.key === "Escape") {
-                                setSearchFocused(false);
-                                searchInputRef.current?.blur();
-                              }
-                            }}
-                            placeholder="Search pages..."
-                            className="w-full bg-transparent text-xs text-white placeholder:text-white/60 outline-none"
-                            aria-label="Search modules"
-                            autoFocus
-                          />
+                            className={cx(
+                              "hs-searchPulse",
+                              "flex w-[240px] items-center gap-2 rounded-full border border-white/15 bg-[#0B0B0B]/85 px-3 py-2 backdrop-blur sm:w-[300px]",
+                              "shadow-[0_18px_35px_rgba(0,0,0,0.28)] transition-all duration-300"
+                            )}
+                            title="Search modules and jump"
+                          >
+                            <Search size={14} className="shrink-0 text-white/80" />
+                            <input
+                              ref={searchInputRef}
+                              value={searchQuery}
+                              onChange={(event) => setSearchQuery(event.target.value)}
+                              onFocus={() => setSearchFocused(true)}
+                              onBlur={() => {
+                                window.setTimeout(() => setSearchFocused(false), 120);
+                              }}
+                              onKeyDown={(event) => {
+                                if (!searchResults.length) return;
+                                if (event.key === "ArrowDown") {
+                                  event.preventDefault();
+                                  setSearchActiveIndex((prev) => Math.min(prev + 1, searchResults.length - 1));
+                                }
+                                if (event.key === "ArrowUp") {
+                                  event.preventDefault();
+                                  setSearchActiveIndex((prev) => Math.max(prev - 1, 0));
+                                }
+                                if (event.key === "Escape") {
+                                  setSearchFocused(false);
+                                  searchInputRef.current?.blur();
+                                }
+                              }}
+                              placeholder="Search pages..."
+                              className="w-full bg-transparent text-xs text-white placeholder:text-white/60 outline-none"
+                              aria-label="Search modules"
+                            />
+                          </form>
                         ) : (
                           <button
                             type="button"
                             onClick={() => setSearchFocused(true)}
-                            className="text-xs text-white/70 whitespace-nowrap"
+                            className={cx(
+                              "hs-searchPulse flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-[#0B0B0B]/85 backdrop-blur",
+                              "shadow-[0_18px_35px_rgba(0,0,0,0.28)] transition-all duration-300 hover:bg-black/90 active:scale-[0.98]"
+                            )}
+                            title="Open search"
+                            aria-label="Open search"
                           >
-                            Search
+                            <Search size={14} className="shrink-0 text-white/80" />
                           </button>
                         )}
-                      </form>
 
-                      {(searchFocused || searchQuery.trim().length > 0) && (
-                        <div className="mt-2 overflow-hidden rounded-2xl border border-white/15 bg-[#0B0B0B]/85 shadow-[0_18px_35px_rgba(0,0,0,0.28)] backdrop-blur">
-                          {searchResults.length ? (
-                            <ul className="max-h-[260px] overflow-y-auto py-1">
-                              {searchResults.map((item, index) => {
-                                const active = index === searchActiveIndex;
-                                return (
-                                  <li key={item.id}>
-                                    <button
-                                      type="button"
-                                      onMouseEnter={() => setSearchActiveIndex(index)}
-                                      onClick={() => handleSearchSelect(item.path)}
-                                      className={cx(
-                                        "w-full px-3 py-2 text-left transition",
-                                        active ? "bg-white/15" : "hover:bg-white/10"
-                                      )}
-                                    >
-                                      <div className="text-sm font-semibold text-white">{item.label}</div>
-                                      <div className="text-xs text-white/70">{item.description}</div>
-                                    </button>
-                                  </li>
-                                );
-                              })}
-                            </ul>
-                          ) : (
-                            <div className="px-3 py-3 text-xs text-white/70">
-                              No matches found. Try keywords like dashboard, social, or marketplace.
-                            </div>
+                        {(searchFocused || searchQuery.trim().length > 0) && (
+                          <div className="absolute right-0 mt-2 overflow-hidden rounded-2xl border border-white/15 bg-[#0B0B0B]/85 shadow-[0_18px_35px_rgba(0,0,0,0.28)] backdrop-blur">
+                            {searchResults.length ? (
+                              <ul className="max-h-[260px] overflow-y-auto py-1">
+                                {searchResults.map((item, index) => {
+                                  const active = index === searchActiveIndex;
+                                  return (
+                                    <li key={item.id}>
+                                      <button
+                                        type="button"
+                                        onMouseEnter={() => setSearchActiveIndex(index)}
+                                        onClick={() => handleSearchSelect(item.path)}
+                                        className={cx(
+                                          "w-full px-3 py-2 text-left transition",
+                                          active ? "bg-white/15" : "hover:bg-white/10"
+                                        )}
+                                      >
+                                        <div className="text-sm font-semibold text-white">{item.label}</div>
+                                        <div className="text-xs text-white/70">{item.description}</div>
+                                      </button>
+                                    </li>
+                                  );
+                                })}
+                              </ul>
+                            ) : (
+                              <div className="px-3 py-3 text-xs text-white/70">
+                                No matches found. Try keywords like dashboard, social, or marketplace.
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      {!token ? (
+                        <button
+                          type="button"
+                          onClick={() => navigate("/login")}
+                          className={cx(
+                            "rounded-full border border-white/15 bg-[#0B0B0B]/85 px-5 py-2.5 text-sm font-medium text-white backdrop-blur",
+                            "shadow-[0_18px_35px_rgba(0,0,0,0.28)] transition-all duration-300 hover:bg-black/90 active:scale-[0.98]"
                           )}
-                        </div>
-                      )}
+                        >
+                          Login
+                        </button>
+                      ) : null}
                     </div>
 
                     <div className="absolute left-6 sm:left-8 bottom-6 sm:bottom-7 z-20">

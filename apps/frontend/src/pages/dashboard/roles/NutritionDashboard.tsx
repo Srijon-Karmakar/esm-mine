@@ -18,6 +18,7 @@ import {
   adminCardBorder,
   formatDateTime,
 } from "../../admin/admin-ui";
+import DashboardAnalyticsLab from "../components/DashboardAnalyticsLab";
 
 type Range = "7d" | "30d" | "90d";
 type OverviewData = {
@@ -186,6 +187,7 @@ export default function NutritionDashboard() {
           )}
         </Section>
       </div>
+      <DashboardAnalyticsLab asRole="NUTRITIONIST" />
     </PageWrap>
   );
 }

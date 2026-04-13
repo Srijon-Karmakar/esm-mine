@@ -67,6 +67,12 @@ enum SocialReactionType {
   LIKE
 }
 
+enum DashboardAnalyticsCategory {
+  MATCH
+  PLAYER
+  CLUB
+}
+
 model User {
   id           String   @id @default(cuid())
   email        String   @unique
@@ -81,10 +87,13 @@ model User {
   squadMembers SquadMember[]
 
   playerProfile PlayerProfile?
+  wellnessEntries PlayerWellnessEntry[]
 
   matchLineupPlayers MatchLineupPlayer[]
   playerMatchStats   PlayerMatchStat[]
   playerInjuries     PlayerInjury[]
+  trainingLoadEntries PlayerTrainingLoadEntry[] @relation("TrainingLoadTarget")
+  createdTrainingLoadEntries PlayerTrainingLoadEntry[] @relation("TrainingLoadCreatedBy")
   createdTasks       ClubTask[]         @relation("TaskCreatedBy")
   assignedTasks      ClubTask[]         @relation("TaskAssignedTo")
   createdMessages    ClubMessage[]      @relation("MessageCreatedBy")
@@ -95,6 +104,7 @@ model User {
   socialReactions    SocialReaction[]   @relation("SocialReactionUser")
   notifications      Notification[]
   createdScheduleEvents ScheduleEvent[]  @relation("ScheduleEventCreatedBy")
+  analyticsEntries   DashboardAnalyticsEntry[] @relation("AnalyticsEntryCreatedBy")
 }
 
 model Club {
@@ -136,6 +146,9 @@ model Club {
   marketplaceOffers MarketplaceOffer[]
   hiredMarketplaceListings MarketplaceListing[] @relation("MarketplaceListingHiredClub")
   socialPosts    SocialPost[]
+  analyticsEntries DashboardAnalyticsEntry[]
+  wellnessEntries PlayerWellnessEntry[]
+  trainingLoadEntries PlayerTrainingLoadEntry[]
 }
 
 model ClubRoleSetting {
@@ -205,6 +218,30 @@ model ClubMessage {
   @@index([clubId])
   @@index([isActive])
   @@index([createdAt])
+}
+
+model DashboardAnalyticsEntry {
+  id               String                     @id @default(cuid())
+  clubId           String
+  createdByUserId  String
+  category         DashboardAnalyticsCategory
+  subjectLabel     String
+  recordedAt       DateTime
+  notes            String?
+  metrics          Json
+  performanceIndex Float
+  readinessIndex   Float
+  momentumIndex    Float
+  dataCompleteness Int                        @default(0)
+  createdAt        DateTime                   @default(now())
+  updatedAt        DateTime                   @updatedAt
+
+  club      Club @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  createdBy User @relation("AnalyticsEntryCreatedBy", fields: [createdByUserId], references: [id], onDelete: Cascade)
+
+  @@index([clubId, recordedAt])
+  @@index([clubId, category, recordedAt])
+  @@index([createdByUserId])
 }
 
 model Membership {
@@ -303,6 +340,7 @@ model PlayerProfile {
   dominantFoot String? // "RIGHT" | "LEFT" | "BOTH"
   positions    String[] // ["ST","LW","CAM"] etc (simple, flexible)
   wellnessStatus String? // "FIT" | "LIMITED" | "UNAVAILABLE"
+  hasInjury      Boolean?
   readinessScore Int?
   energyLevel    Int?
   sorenessLevel  Int?
@@ -314,6 +352,49 @@ model PlayerProfile {
   updatedAt DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id])
+}
+
+model PlayerWellnessEntry {
+  id             String   @id @default(cuid())
+  clubId         String
+  userId         String
+  wellnessStatus String?
+  hasInjury      Boolean?
+  readinessScore Int?
+  energyLevel    Int?
+  sorenessLevel  Int?
+  sleepHours     Float?
+  healthNotes    String?
+  recordedAt     DateTime @default(now())
+  createdAt      DateTime @default(now())
+
+  club Club @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([clubId, userId, recordedAt])
+  @@index([userId, recordedAt])
+}
+
+model PlayerTrainingLoadEntry {
+  id              String   @id @default(cuid())
+  clubId          String
+  userId          String
+  createdByUserId String
+  sessionDate     DateTime
+  sessionType     String?
+  durationMinutes Int
+  rpe             Int
+  loadScore       Int
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  club      Club @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  user      User @relation("TrainingLoadTarget", fields: [userId], references: [id], onDelete: Cascade)
+  createdBy User @relation("TrainingLoadCreatedBy", fields: [createdByUserId], references: [id], onDelete: Cascade)
+
+  @@index([clubId, userId, sessionDate])
+  @@index([createdByUserId])
 }
 
 model MarketplaceListing {
@@ -370,6 +451,7 @@ model SocialPost {
   skill        String
   caption      String
   tags         String[]
+  instagramUrl String?
   visibility   SocialVisibility @default(PUBLIC)
   isArchived   Boolean          @default(false)
   createdAt    DateTime         @default(now())

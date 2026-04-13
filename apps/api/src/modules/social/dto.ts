@@ -5,6 +5,7 @@ import {
   IsInt,
   IsOptional,
   IsString,
+  IsUrl,
   Max,
   MaxLength,
   Min,
@@ -87,9 +88,15 @@ export class CreateSocialPostDto {
   @MaxLength(30, { each: true })
   tags?: string[];
 
+  @IsOptional()
   @ValidateNested()
   @Type(() => CreateSocialMediaDto)
-  media!: CreateSocialMediaDto;
+  media?: CreateSocialMediaDto;
+
+  @IsOptional()
+  @IsUrl({ protocols: ['https'], require_protocol: true })
+  @MaxLength(2000)
+  instagramUrl?: string;
 }
 
 export class CreateSocialCommentDto {

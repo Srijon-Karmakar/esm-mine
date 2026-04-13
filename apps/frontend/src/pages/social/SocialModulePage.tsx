@@ -1,4 +1,4 @@
-import { useMemo, useState, type CSSProperties, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Bookmark,
@@ -97,12 +97,15 @@ export default function SocialModulePage() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [composeError, setComposeError] = useState<string | null>(null);
   const [composeInfo, setComposeInfo] = useState<string | null>(null);
+  const [composeMode, setComposeMode] = useState<"upload" | "instagram">("upload");
   const [composer, setComposer] = useState({
     skill: "",
     caption: "",
     tags: "",
     file: null as File | null,
+    instagramUrl: "",
   });
+  const igScriptLoaded = useRef(false);
 
   const posts = useMemo(() => feedQuery.data?.posts || [], [feedQuery.data?.posts]);
 
@@ -153,15 +156,31 @@ export default function SocialModulePage() {
       setComposeInfo(null);
       const skill = composer.skill.trim();
       const caption = composer.caption.trim();
+      const instagramUrl = composer.instagramUrl.trim();
       const file = composer.file;
 
       if (!skill || !caption) throw new Error("Skill and caption are required");
+
+      const tags = composer.tags
+        .split(",")
+        .map((item) => item.trim().replace(/^#/, ""))
+        .filter(Boolean);
+
+      // Instagram URL mode — no file upload needed
+      if (composeMode === "instagram") {
+        if (!instagramUrl) throw new Error("Paste an Instagram post URL");
+        const igPattern = /^https:\/\/(www\.)?instagram\.com\/(p|reel|tv)\/[\w-]+\/?/;
+        if (!igPattern.test(instagramUrl)) {
+          throw new Error("Must be a valid instagram.com/p/, /reel/, or /tv/ URL");
+        }
+        return createSocialPost({ skill, caption, tags, instagramUrl });
+      }
+
+      // Upload mode
       if (!file) throw new Error("Select an image or video first");
 
       const prepared = await prepareSocialMediaForUpload(file);
-      if (prepared.note) {
-        setComposeInfo(prepared.note);
-      }
+      if (prepared.note) setComposeInfo(prepared.note);
 
       const signature = await createSocialMediaSignature({
         resourceType: prepared.resourceType,
@@ -204,25 +223,10 @@ export default function SocialModulePage() {
         throw new Error(`Video duration exceeds ${MAX_VIDEO_DURATION_SEC} seconds`);
       }
 
-      const tags = composer.tags
-        .split(",")
-        .map((item) => item.trim().replace(/^#/, ""))
-        .filter(Boolean);
-
-      return createSocialPost({
-        skill,
-        caption,
-        tags,
-        media: uploaded,
-      });
+      return createSocialPost({ skill, caption, tags, media: uploaded });
     },
     onSuccess: async () => {
-      setComposer({
-        skill: "",
-        caption: "",
-        tags: "",
-        file: null,
-      });
+      setComposer({ skill: "", caption: "", tags: "", file: null, instagramUrl: "" });
       setComposeInfo(null);
       setUploadProgress(0);
       await qc.invalidateQueries({ queryKey: ["social", "feed"] });
@@ -254,7 +258,20 @@ export default function SocialModulePage() {
     },
   });
 
-  function onPublishPost(event: FormEvent<HTMLFormElement>) {
+  // Load Instagram embed.js once; re-process whenever new posts arrive
+  useEffect(() => {
+    if (!igScriptLoaded.current) {
+      igScriptLoaded.current = true;
+      const script = document.createElement("script");
+      script.src = "https://www.instagram.com/embed.js";
+      script.async = true;
+      document.body.appendChild(script);
+    } else {
+      (window as any).instgrm?.Embeds?.process();
+    }
+  }, [visiblePosts]);
+
+  function onPublishPost(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!canPublish) return;
     publishMutation.mutate();
@@ -343,6 +360,26 @@ export default function SocialModulePage() {
                 <span>{canPublish ? "Public" : "Viewer mode"}</span>
               </div>
 
+              {/* Mode toggle */}
+              <div className="social-filter-row" style={{ marginBottom: 8 }}>
+                <button
+                  type="button"
+                  className={`social-chip ${composeMode === "upload" ? "is-active" : ""}`}
+                  onClick={() => setComposeMode("upload")}
+                  disabled={publishMutation.isPending}
+                >
+                  <UploadCloud size={13} /> Upload
+                </button>
+                <button
+                  type="button"
+                  className={`social-chip ${composeMode === "instagram" ? "is-active" : ""}`}
+                  onClick={() => setComposeMode("instagram")}
+                  disabled={publishMutation.isPending}
+                >
+                  Instagram
+                </button>
+              </div>
+
               <form onSubmit={onPublishPost} className="social-composer-form">
                 <input
                   value={composer.skill}
@@ -363,29 +400,42 @@ export default function SocialModulePage() {
                   placeholder="Tags (comma separated)"
                   disabled={!canPublish || publishMutation.isPending}
                 />
-                <label className="social-upload-field">
-                  <UploadCloud size={15} />
-                  <span>{composer.file ? composer.file.name : "Choose image/video"}</span>
+
+                {composeMode === "instagram" ? (
                   <input
-                    type="file"
-                    accept="image/*,video/*"
-                    onChange={(event) =>
-                      setComposer((prev) => ({
-                        ...prev,
-                        file: event.target.files?.[0] || null,
-                      }))
-                    }
+                    value={composer.instagramUrl}
+                    onChange={(event) => setComposer((prev) => ({ ...prev, instagramUrl: event.target.value }))}
+                    placeholder="https://www.instagram.com/p/..."
                     disabled={!canPublish || publishMutation.isPending}
                   />
-                </label>
-                <p className="social-note">
-                  Image max: {(MAX_IMAGE_UPLOAD_BYTES / 1024 / 1024).toFixed(0)} MB and{" "}
-                  {MAX_IMAGE_WIDTH_PX}x{MAX_IMAGE_HEIGHT_PX}. Video max:{" "}
-                  {(MAX_VIDEO_UPLOAD_BYTES / 1024 / 1024).toFixed(0)} MB (raw input up to{" "}
-                  {(MAX_VIDEO_INPUT_BYTES / 1024 / 1024).toFixed(0)} MB with auto compression),{" "}
-                  {MAX_VIDEO_WIDTH_PX}x{MAX_VIDEO_HEIGHT_PX}, and {MAX_VIDEO_DURATION_SEC}s duration.
-                </p>
-                {publishMutation.isPending ? (
+                ) : (
+                  <>
+                    <label className="social-upload-field">
+                      <UploadCloud size={15} />
+                      <span>{composer.file ? composer.file.name : "Choose image/video"}</span>
+                      <input
+                        type="file"
+                        accept="image/*,video/*"
+                        onChange={(event) =>
+                          setComposer((prev) => ({
+                            ...prev,
+                            file: event.target.files?.[0] || null,
+                          }))
+                        }
+                        disabled={!canPublish || publishMutation.isPending}
+                      />
+                    </label>
+                    <p className="social-note">
+                      Image max: {(MAX_IMAGE_UPLOAD_BYTES / 1024 / 1024).toFixed(0)} MB and{" "}
+                      {MAX_IMAGE_WIDTH_PX}x{MAX_IMAGE_HEIGHT_PX}. Video max:{" "}
+                      {(MAX_VIDEO_UPLOAD_BYTES / 1024 / 1024).toFixed(0)} MB (raw input up to{" "}
+                      {(MAX_VIDEO_INPUT_BYTES / 1024 / 1024).toFixed(0)} MB with auto compression),{" "}
+                      {MAX_VIDEO_WIDTH_PX}x{MAX_VIDEO_HEIGHT_PX}, and {MAX_VIDEO_DURATION_SEC}s duration.
+                    </p>
+                  </>
+                )}
+
+                {publishMutation.isPending && composeMode === "upload" ? (
                   <div className="social-upload-progress">
                     <div style={{ width: `${uploadProgress}%` }} />
                   </div>
@@ -406,7 +456,7 @@ export default function SocialModulePage() {
                       publishMutation.isPending ||
                       !composer.skill.trim() ||
                       !composer.caption.trim() ||
-                      !composer.file
+                      (composeMode === "upload" ? !composer.file : !composer.instagramUrl.trim())
                     }
                   >
                     <Plus size={15} />
@@ -459,7 +509,16 @@ export default function SocialModulePage() {
                       <small>{formatPostedAt(post.createdAt)}</small>
                     </div>
 
-                    {post.media ? (
+                    {post.instagramUrl ? (
+                      <div className="social-media social-media--instagram">
+                        <blockquote
+                          className="instagram-media"
+                          data-instgrm-permalink={post.instagramUrl}
+                          data-instgrm-version="14"
+                          style={{ margin: "0 auto", width: "100%", maxWidth: 540 }}
+                        />
+                      </div>
+                    ) : post.media ? (
                       <div className="social-media">
                         {post.media.kind === "video" ? (
                           <video controls preload="metadata" src={post.media.url} />

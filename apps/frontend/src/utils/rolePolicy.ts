@@ -10,6 +10,7 @@ export type RolePermission =
   | "membership.accept.assignment"
   | "dashboard.view"
   | "dashboard.switch.context"
+  | "analytics.write"
   | "clubs.read"
   | "clubs.create"
   | "members.read"
@@ -21,6 +22,7 @@ export type RolePermission =
   | "invitations.revoke"
   | "invitations.resend"
   | "players.read"
+  | "players.write"
   | "squads.read"
   | "squads.write"
   | "lineups.read"
@@ -48,7 +50,10 @@ export const MULTI_ROLE_SWITCH_PRIMARY_ALLOWLIST: readonly PrimaryRole[] = [
   "MANAGER",
 ];
 
-export const PRIMARY_ROLE_PERMISSIONS: Record<PrimaryRole, readonly RolePermission[]> = {
+export const PRIMARY_ROLE_PERMISSIONS: Record<
+  PrimaryRole,
+  readonly RolePermission[]
+> = {
   MEMBER: [
     "auth.session.read",
     "profile.self.read",
@@ -88,26 +93,16 @@ export const PRIMARY_ROLE_PERMISSIONS: Record<PrimaryRole, readonly RolePermissi
     "members.read",
     "players.read",
     "squads.read",
-    "squads.write",
     "lineups.read",
-    "lineups.write",
     "matches.read",
-    "matches.write",
     "injuries.read",
-    "injuries.write",
     "operations.read",
-    "operations.write",
     "seasons.read",
-    "seasons.write",
     "opponents.read",
-    "opponents.write",
     "stats.read",
-    "stats.recompute",
     "leaderboards.read",
     "marketplace.read",
-    "marketplace.write",
     "schedule.read",
-    "schedule.write",
   ],
   ADMIN: [
     "auth.session.read",
@@ -116,6 +111,7 @@ export const PRIMARY_ROLE_PERMISSIONS: Record<PrimaryRole, readonly RolePermissi
     "membership.self.read",
     "dashboard.view",
     "dashboard.switch.context",
+    "analytics.write",
     "clubs.read",
     "clubs.create",
     "members.read",
@@ -127,6 +123,7 @@ export const PRIMARY_ROLE_PERMISSIONS: Record<PrimaryRole, readonly RolePermissi
     "invitations.revoke",
     "invitations.resend",
     "players.read",
+    "players.write",
     "squads.read",
     "squads.write",
     "lineups.read",
@@ -151,61 +148,59 @@ export const PRIMARY_ROLE_PERMISSIONS: Record<PrimaryRole, readonly RolePermissi
   ],
 };
 
-export const SUB_ROLE_PERMISSIONS: Record<SubRole, readonly RolePermission[]> = {
-  COACH: [
-    "dashboard.view",
-    "players.read",
-    "schedule.read",
-    "squads.read",
-    "lineups.read",
-    "lineups.write",
-    "matches.read",
-    "stats.read",
-    "leaderboards.read",
-    "marketplace.read",
-    "marketplace.write",
-  ],
-  PHYSIO: [
-    "dashboard.view",
-    "players.read",
-    "schedule.read",
-    "matches.read",
-    "injuries.read",
-    "stats.read",
-  ],
-  AGENT: [
-    "dashboard.view",
-    "players.read",
-    "schedule.read",
-    "matches.read",
-    "stats.read",
-    "leaderboards.read",
-  ],
-  NUTRITIONIST: [
-    "dashboard.view",
-    "players.read",
-    "schedule.read",
-    "matches.read",
-    "injuries.read",
-    "stats.read",
-  ],
-  PITCH_MANAGER: [
-    "dashboard.view",
-    "schedule.read",
-    "matches.read",
-    "operations.read",
-  ],
-  CAPTAIN: [
-    "dashboard.view",
-    "schedule.read",
-  ],
-};
+export const SUB_ROLE_PERMISSIONS: Record<SubRole, readonly RolePermission[]> =
+  {
+    COACH: [
+      "dashboard.view",
+      "players.read",
+      "schedule.read",
+      "squads.read",
+      "lineups.read",
+      "matches.read",
+      "stats.read",
+      "leaderboards.read",
+      "marketplace.read",
+    ],
+    PHYSIO: [
+      "dashboard.view",
+      "players.read",
+      "schedule.read",
+      "matches.read",
+      "injuries.read",
+      "stats.read",
+    ],
+    AGENT: [
+      "dashboard.view",
+      "players.read",
+      "schedule.read",
+      "matches.read",
+      "stats.read",
+      "leaderboards.read",
+    ],
+    NUTRITIONIST: [
+      "dashboard.view",
+      "players.read",
+      "schedule.read",
+      "matches.read",
+      "injuries.read",
+      "stats.read",
+    ],
+    PITCH_MANAGER: [
+      "dashboard.view",
+      "schedule.read",
+      "matches.read",
+      "operations.read",
+    ],
+    CAPTAIN: ["dashboard.view", "schedule.read"],
+  };
 
 export function listRolePermissions(
   primary: PrimaryRole,
-  subRoles: readonly SubRole[] = []
+  subRoles: readonly SubRole[] = [],
 ): RolePermission[] {
-  const allowed = new Set<RolePermission>(PRIMARY_ROLE_PERMISSIONS[primary] || []);
+  const allowed = new Set<RolePermission>(
+    PRIMARY_ROLE_PERMISSIONS[primary] || [],
+  );
   for (const role of subRoles) {
     for (const permission of SUB_ROLE_PERMISSIONS[role] || []) {
       allowed.add(permission);
@@ -217,7 +212,7 @@ export function listRolePermissions(
 export function hasRolePermission(
   primary: PrimaryRole,
   subRoles: readonly SubRole[] | undefined,
-  permission: RolePermission
+  permission: RolePermission,
 ) {
   return listRolePermissions(primary, subRoles || []).includes(permission);
 }

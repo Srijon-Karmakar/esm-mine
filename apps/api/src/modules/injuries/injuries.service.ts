@@ -26,13 +26,10 @@ export class InjuriesService {
     return m;
   }
 
-  private assertManagerRole(primary: PrimaryRole) {
-    const allowed = new Set<PrimaryRole>([
-      PrimaryRole.ADMIN,
-      PrimaryRole.MANAGER,
-    ]);
-    if (!allowed.has(primary))
-      throw new ForbiddenException('Insufficient role');
+  private assertAdminRole(primary: PrimaryRole) {
+    if (primary !== PrimaryRole.ADMIN) {
+      throw new ForbiddenException('Only ADMIN can manage injury records');
+    }
   }
 
   /** returns null if empty/undefined, throws if invalid date */
@@ -64,7 +61,7 @@ export class InjuriesService {
   // ADMIN/MANAGER creates an injury record for a player (userId)
   async create(actorId: string, clubId: string, dto: CreateInjuryDto) {
     const m = await this.assertClubMember(actorId, clubId);
-    this.assertManagerRole(m.primary);
+    this.assertAdminRole(m.primary);
 
     const userId = dto.userId?.trim();
     if (!userId) throw new BadRequestException('Missing userId');
@@ -145,7 +142,7 @@ export class InjuriesService {
     dto: UpdateInjuryDto,
   ) {
     const m = await this.assertClubMember(actorId, clubId);
-    this.assertManagerRole(m.primary);
+    this.assertAdminRole(m.primary);
 
     const exists = await this.prisma.playerInjury.findFirst({
       where: { id: injuryId, clubId },
@@ -225,7 +222,7 @@ export class InjuriesService {
   // ADMIN/MANAGER delete
   async remove(actorId: string, clubId: string, injuryId: string) {
     const m = await this.assertClubMember(actorId, clubId);
-    this.assertManagerRole(m.primary);
+    this.assertAdminRole(m.primary);
 
     const exists = await this.prisma.playerInjury.findFirst({
       where: { id: injuryId, clubId },
@@ -248,7 +245,7 @@ export class InjuriesService {
     endDate?: string,
   ) {
     const m = await this.assertClubMember(actorId, clubId);
-    this.assertManagerRole(m.primary);
+    this.assertAdminRole(m.primary);
 
     const exists = await this.prisma.playerInjury.findFirst({
       where: { id: injuryId, clubId },

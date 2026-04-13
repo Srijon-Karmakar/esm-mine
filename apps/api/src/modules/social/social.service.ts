@@ -41,6 +41,12 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
 
+const INSTAGRAM_URL_RE = /^https:\/\/(www\.)?instagram\.com\/(p|reel|tv)\/[\w-]+\/?/;
+
+function isValidInstagramUrl(url: string): boolean {
+  return INSTAGRAM_URL_RE.test(url);
+}
+
 function sanitizeTag(input: string) {
   return String(input || '')
     .trim()
@@ -187,6 +193,7 @@ export class SocialService {
             }
           : null,
       },
+      instagramUrl: row.instagramUrl || null,
       media: row.media
         ? {
             id: row.media.id,
@@ -288,58 +295,57 @@ export class SocialService {
       if (!context.canPublish) {
         throw new ForbiddenException('Only players can publish social posts');
       }
-      if (!dto.media?.url || !dto.media?.publicId) {
-        throw new BadRequestException('Media payload is required');
+
+      const hasMedia = !!(dto.media?.url && dto.media?.publicId);
+      const hasInstagram = !!(dto.instagramUrl?.trim());
+
+      if (!hasMedia && !hasInstagram) {
+        throw new BadRequestException('Either a media upload or an Instagram post URL is required');
       }
-      if (dto.media.kind === 'image' && typeof dto.media.bytes === 'number' && dto.media.bytes > MAX_IMAGE_BYTES) {
-        throw new BadRequestException('Image media is too large after compression (max 8 MB)');
+      if (hasInstagram && !isValidInstagramUrl(dto.instagramUrl!.trim())) {
+        throw new BadRequestException('Instagram URL must be a valid instagram.com/p/, /reel/, or /tv/ link');
       }
-      if (dto.media.kind === 'video' && typeof dto.media.bytes === 'number' && dto.media.bytes > MAX_VIDEO_BYTES) {
-        throw new BadRequestException('Video media is too large after compression (max 80 MB)');
-      }
-      if (
-        dto.media.kind === 'image' &&
-        (typeof dto.media.width !== 'number' || typeof dto.media.height !== 'number')
-      ) {
-        throw new BadRequestException('Image metadata is incomplete (width/height required)');
-      }
-      if (
-        dto.media.kind === 'image' &&
-        typeof dto.media.width === 'number' &&
-        typeof dto.media.height === 'number' &&
-        (dto.media.width > MAX_IMAGE_WIDTH || dto.media.height > MAX_IMAGE_HEIGHT)
-      ) {
-        throw new BadRequestException('Image resolution exceeds 1920x1920');
-      }
-      if (
-        dto.media.kind === 'video' &&
-        (typeof dto.media.width !== 'number' || typeof dto.media.height !== 'number')
-      ) {
-        throw new BadRequestException('Video metadata is incomplete (width/height required)');
-      }
-      if (
-        dto.media.kind === 'video' &&
-        typeof dto.media.width === 'number' &&
-        typeof dto.media.height === 'number' &&
-        (dto.media.width > MAX_VIDEO_WIDTH || dto.media.height > MAX_VIDEO_HEIGHT)
-      ) {
-        throw new BadRequestException('Video resolution exceeds 1280x720');
-      }
-      if (
-        dto.media.kind === 'video' &&
-        (typeof dto.media.durationSec !== 'number' || !Number.isFinite(dto.media.durationSec))
-      ) {
-        throw new BadRequestException('Video metadata is incomplete (duration required)');
-      }
-      if (
-        dto.media.kind === 'video' &&
-        typeof dto.media.durationSec === 'number' &&
-        dto.media.durationSec > MAX_VIDEO_DURATION_SEC
-      ) {
-        throw new BadRequestException('Video duration exceeds 90 seconds');
+
+      if (hasMedia) {
+        const m = dto.media!;
+        if (m.kind === 'image' && typeof m.bytes === 'number' && m.bytes > MAX_IMAGE_BYTES) {
+          throw new BadRequestException('Image media is too large after compression (max 8 MB)');
+        }
+        if (m.kind === 'video' && typeof m.bytes === 'number' && m.bytes > MAX_VIDEO_BYTES) {
+          throw new BadRequestException('Video media is too large after compression (max 80 MB)');
+        }
+        if (m.kind === 'image' && (typeof m.width !== 'number' || typeof m.height !== 'number')) {
+          throw new BadRequestException('Image metadata is incomplete (width/height required)');
+        }
+        if (
+          m.kind === 'image' &&
+          typeof m.width === 'number' &&
+          typeof m.height === 'number' &&
+          (m.width > MAX_IMAGE_WIDTH || m.height > MAX_IMAGE_HEIGHT)
+        ) {
+          throw new BadRequestException('Image resolution exceeds 1920x1920');
+        }
+        if (m.kind === 'video' && (typeof m.width !== 'number' || typeof m.height !== 'number')) {
+          throw new BadRequestException('Video metadata is incomplete (width/height required)');
+        }
+        if (
+          m.kind === 'video' &&
+          typeof m.width === 'number' &&
+          typeof m.height === 'number' &&
+          (m.width > MAX_VIDEO_WIDTH || m.height > MAX_VIDEO_HEIGHT)
+        ) {
+          throw new BadRequestException('Video resolution exceeds 1280x720');
+        }
+        if (m.kind === 'video' && (typeof m.durationSec !== 'number' || !Number.isFinite(m.durationSec))) {
+          throw new BadRequestException('Video metadata is incomplete (duration required)');
+        }
+        if (m.kind === 'video' && typeof m.durationSec === 'number' && m.durationSec > MAX_VIDEO_DURATION_SEC) {
+          throw new BadRequestException('Video duration exceeds 90 seconds');
+        }
       }
 
       const tags = uniq((dto.tags || []).map((tag) => sanitizeTag(tag)).filter(Boolean)).slice(0, 12);
+      const instagramUrl = hasInstagram ? dto.instagramUrl!.trim() : null;
 
       const created = await this.postRepo().create({
         data: {
@@ -348,20 +354,24 @@ export class SocialService {
           skill: dto.skill.trim(),
           caption: dto.caption.trim(),
           tags,
+          instagramUrl,
           visibility: 'PUBLIC',
-          media: {
-            create: {
-              type: dto.media.kind === 'video' ? 'VIDEO' : 'IMAGE',
-              url: dto.media.url.trim(),
-              publicId: dto.media.publicId.trim(),
-              format: dto.media.format?.trim() || null,
-              width: typeof dto.media.width === 'number' ? dto.media.width : null,
-              height: typeof dto.media.height === 'number' ? dto.media.height : null,
-              durationSec:
-                typeof dto.media.durationSec === 'number' ? dto.media.durationSec : null,
-              bytes: typeof dto.media.bytes === 'number' ? dto.media.bytes : null,
-            },
-          },
+          ...(hasMedia && dto.media
+            ? {
+                media: {
+                  create: {
+                    type: dto.media.kind === 'video' ? 'VIDEO' : 'IMAGE',
+                    url: dto.media.url.trim(),
+                    publicId: dto.media.publicId.trim(),
+                    format: dto.media.format?.trim() || null,
+                    width: typeof dto.media.width === 'number' ? dto.media.width : null,
+                    height: typeof dto.media.height === 'number' ? dto.media.height : null,
+                    durationSec: typeof dto.media.durationSec === 'number' ? dto.media.durationSec : null,
+                    bytes: typeof dto.media.bytes === 'number' ? dto.media.bytes : null,
+                  },
+                },
+              }
+            : {}),
         },
         include: {
           author: {

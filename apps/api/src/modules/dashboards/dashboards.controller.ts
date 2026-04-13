@@ -1,6 +1,9 @@
-import { Controller, Get, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { Permissions } from '../../common/decorators/permissions.decorator';
+import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { JwtAuthGuard } from '../auth/jwt.guard';
 import { DashboardsService } from './dashboards.service';
+import { CreateDashboardAnalyticsEntryDto } from './dto';
 
 @Controller('dashboard')
 @UseGuards(JwtAuthGuard)
@@ -37,5 +40,28 @@ export class DashboardsController {
   ) {
     const clubIdFromHeader = req.headers['x-club-id'] as string | undefined;
     return this.dashboards.recent(req.user.sub, clubIdFromHeader || clubId, Number(limit), asRole);
+  }
+
+  @Get('analytics')
+  analytics(
+    @Req() req: any,
+    @Query('clubId') clubId?: string,
+    @Query('range') range: string = '30d',
+    @Query('as') asRole?: string,
+  ) {
+    const clubIdFromHeader = req.headers['x-club-id'] as string | undefined;
+    return this.dashboards.analytics(req.user.sub, clubIdFromHeader || clubId, range, asRole);
+  }
+
+  @Post('analytics')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @Permissions('analytics.write')
+  createAnalytics(
+    @Req() req: any,
+    @Body() dto: CreateDashboardAnalyticsEntryDto,
+    @Query('clubId') clubId?: string,
+  ) {
+    const clubIdFromHeader = req.headers['x-club-id'] as string | undefined;
+    return this.dashboards.createAnalytics(req.user.sub, clubIdFromHeader || clubId, dto);
   }
 }

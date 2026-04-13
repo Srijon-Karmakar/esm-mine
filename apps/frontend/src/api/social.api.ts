@@ -29,6 +29,7 @@ export type SocialFeedPost = {
   caption: string;
   tags: string[];
   createdAt: string;
+  instagramUrl: string | null;
   author: {
     id: string;
     fullName: string;
@@ -82,7 +83,8 @@ export type CreateSocialPostPayload = {
   skill: string;
   caption: string;
   tags?: string[];
-  media: {
+  instagramUrl?: string;
+  media?: {
     kind: "image" | "video";
     url: string;
     publicId: string;
@@ -94,7 +96,7 @@ export type CreateSocialPostPayload = {
   };
 };
 
-export type UploadedSocialMedia = CreateSocialPostPayload["media"];
+export type UploadedSocialMedia = NonNullable<CreateSocialPostPayload["media"]>;
 
 export async function getSocialFeed(limit = 20): Promise<SocialFeedResponse> {
   const { data } = await http.get<SocialFeedResponse>("/social/feed", {

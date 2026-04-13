@@ -19,6 +19,7 @@ import {
   cx,
   formatDateTime,
 } from "../../admin/admin-ui";
+import DashboardAnalyticsLab from "../components/DashboardAnalyticsLab";
 
 type Range = "7d" | "30d" | "90d";
 type OverviewData = {
@@ -230,6 +231,7 @@ export default function PitchManagerDashboard() {
           </div>
         )}
       </Section>
+      <DashboardAnalyticsLab asRole="PITCH_MANAGER" />
     </PageWrap>
   );
 }
